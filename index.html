@@ -613,6 +613,28 @@ input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color])
 .callpage .vol-row span,.callpage .vol-row b{color:#fff;} .call-mini{touch-action:none;}
 .app-label{color:var(--lbl,var(--text));text-shadow:var(--lbls,none);} body:has(#screen-home.active) .statusbar{color:var(--lbl,var(--text));text-shadow:var(--lbls,none);}
 #chat.haswp .tstamp,#chat.haswp .sysmsg,#chat.haswp .tm-side,#chat.haswp .tm-av,#chat.haswp .sname,#chat.haswp .empty{color:var(--wp-fg)!important;text-shadow:var(--wp-sh);} #chat.haswp .sysmsg{background:transparent;}
+
+/* ===== 移动端视口与键盘布局：屏幕底边始终贴合可视区域 ===== */
+:root{--app-vh:100dvh;--vv-top:0px;}
+html,body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;}
+body{height:100%;padding:0;}
+.screen{position:fixed!important;left:0!important;right:0!important;top:var(--vv-top,0px)!important;bottom:auto!important;height:var(--app-vh,100dvh)!important;min-height:0!important;overflow:hidden;}
+#screen-chat{flex-direction:column;min-height:0!important;}
+#screen-chat.active{display:flex;}
+#screen-chat>header{flex:0 0 auto;}
+#screen-chat>#chat{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;}
+#screen-chat>.reply-preview,#screen-chat>.selbar,#screen-chat>.plus-panel,#screen-chat>footer{flex-shrink:0;}
+#screen-chat>footer{padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));background:var(--bg);}
+#msgInput{min-height:20px;max-height:110px;overflow-y:auto;}
+#screen-chat .input-wrap{min-width:0;}
+/* 设置弹层贴住屏幕底部 */
+#settingsOverlay{align-items:flex-end;padding-top:var(--sbh,0px);}
+#settingsOverlay .sheet{height:calc(100% - var(--sbh,0px));max-height:calc(100dvh - var(--sbh,0px));min-height:0;border-radius:16px 16px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));}
+#settingsOverlay .sheet>*{flex-shrink:0;}
+#settingsOverlay .sheet{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+body.keyboard-open #screen-chat>footer{padding-bottom:8px;}
+@media (max-width:600px){#screen-chat>#chat{scroll-behavior:auto;}}
+
 </style>
 </head>
 <body>
@@ -703,6 +725,10 @@ input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color])
 <div class="screen" id="screen-settings">
   <header><div class="header-inner"><button class="icon-btn" id="backHome5">‹</button><div class="title">衡枢</div></div></header>
   <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;flex:1;overflow-y:auto;">
+    <details class="acc"><summary>麦克风权限</summary>
+      <div class="field-row"><label style="width:auto;flex:1;">麦克风状态</label><span id="micPermissionState" style="font-size:calc(var(--fs)*0.929);color:var(--sub);">尚未检查</span></div>
+      <div class="sheet-sub">点击下方按钮后，系统会询问是否允许使用麦克风。允许后可在聊天页面点击麦克风按钮录音；你也可以随时在手机系统设置中撤销权限。需要通过 HTTPS 网站或支持麦克风的本地环境打开。</div>
+      <button class="btn-mini" id="micPermissionBtn" style="align-self:flex-start;margin:6px 0 12px;">请求麦克风权限</button></details>
     <details class="acc"><summary>通知</summary>
       <div class="field-row"><label style="width:auto;flex:1;">允许通知</label><label class="switch"><input type="checkbox" id="notifyToggle"><span class="slider"></span></label></div>
       <div class="sheet-sub">开启后，页面在后台（切到别的应用或标签页）时，对方的消息、来信会弹出系统通知。网页被系统彻底关闭后无法推送。</div>
@@ -718,7 +744,7 @@ input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color])
       <div class="field-row" id="ttsGroupRow"><label>GroupId</label><input type="text" id="ttsGroup" placeholder="MiniMax 的 GroupId"></div>
       <div class="field-row" id="ttsAppRow"><label>AppId</label><input type="text" id="ttsApp" placeholder="火山 AppId"></div>
       <div class="field-row" id="ttsClusterRow"><label>Cluster</label><input type="text" id="ttsCluster" placeholder="默认 volcano_tts"></div>
-      <div class="sheet-sub">用于“有声语音”和通话里的说话。密钥只保存在本机浏览器里。注意：部分托管页面（例如 claude.ai 里打开的链接）会拦截对外网络请求，此时合成会失败；把 HTML 文件保存到手机/电脑本地或自己的站点里打开通常可用。</div>
+      <div class="sheet-sub">用于“有声语音”和通话里的说话。密钥只保存在本机浏览器里。若网络请求受当前浏览器或托管环境限制，语音合成可能失败；建议使用 Safari 或 Chrome 打开，或部署到自己的 HTTPS 网站。</div>
       <div class="field-row"><label>试读文字</label><input type="text" id="ttsTestText" value="你好呀，今天也很想你。" placeholder="输入一段话来试听"></div>
       <div style="display:flex;gap:8px;margin:6px 0 12px;"><button class="btn-mini" id="ttsSave">保存</button><button class="btn-mini" id="ttsTest">测试朗读</button></div></details>
     <details class="acc"><summary>备份与恢复</summary>
@@ -778,7 +804,7 @@ input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color])
     <div class="field-row"><label>页面主题</label><div class="seg" id="themeSeg" style="flex:1;"></div></div>
     <div class="field-row"><label>显示状态栏</label><label class="switch"><input type="checkbox" id="sbToggle"><span class="slider"></span></label></div>
     <div class="field-row"><label>顶部避让</label><input type="range" id="topOff" min="0" max="140" step="2" value="0" style="flex:1;"><span id="topOffVal" style="width:46px;text-align:right;font-size:calc(var(--fs)*0.929);color:var(--sub);">0px</span></div>
-    <div class="sheet-sub">先说原因：不是这个页面在“避让”手机状态栏。是 Claude 把页面放在它自己的状态栏下面，并且给那一条涂了底色，页面从里面碰不到那一块，所以在 Claude 里打开时，那条的颜色没法改。<br>想要状态栏直接印在页面上：用 Safari 打开这个链接，点分享 → “添加到主屏幕”，从桌面图标打开。这时页面会铺满整个屏幕，手机自己的时间、信号、电量会直接印在页面顶上（我已经在顶部加了一层很淡的暗角，保证白色的时间看得清），上面那条假的状态栏也会自动隐藏。“顶部避让”只在被标题栏挡住时用。</div>
+    <div class="sheet-sub">若希望页面更接近全屏显示，建议使用 Safari 打开，并通过分享菜单选择“添加到主屏幕”，之后从桌面图标启动。不同浏览器和托管容器对状态栏区域的控制能力不同，网页无法覆盖系统自身的界面。</div>
     <button class="btn-mini" id="fsBtn" style="align-self:flex-start;">尝试进入全屏</button>
     <div class="sec-title">软件图标与名称</div>
     <div class="field-row"><label>图标颜色</label><div class="avpick"><input type="color" id="iconColor" value="#ff6b8f"><button class="btn-mini" id="resetIconColor">恢复默认</button></div></div>
@@ -2141,7 +2167,9 @@ function notifyMsg(m){ if(!document.hidden) return; const r=curRole(); const who
 var lastUnread=0;
 function checkNewLetterNotify(){ const n=unreadCount(); if(n>lastUnread&&document.hidden) notify('收到一封信','有 '+n+' 封信还没读'); lastUnread=n; }
 $('backHome5').addEventListener('click',goHome);
-function openSettingsApp(){ $('notifyToggle').checked=!!appSet.notify&&('Notification' in window)&&Notification.permission==='granted'; syncTts(); show('screen-settings'); }
+function openSettingsApp(){ $('notifyToggle').checked=!!appSet.notify&&('Notification' in window)&&Notification.permission==='granted'; syncTts(); show('screen-settings'); refreshMicPermission(); }
+async function refreshMicPermission(){ const el=$('micPermissionState'); if(!el) return; try{ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ el.textContent='当前环境不支持'; return; } if(navigator.permissions&&navigator.permissions.query){ const p=await navigator.permissions.query({name:'microphone'}); el.textContent=p.state==='granted'?'已允许':p.state==='denied'?'已拒绝':'尚未授权'; } else el.textContent='可请求权限'; }catch(e){ el.textContent='尚未检查'; } }
+$('micPermissionBtn').addEventListener('click',async()=>{ try{ if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ toast('请通过 HTTPS 网站或支持的本地环境打开'); return; } const stream=await navigator.mediaDevices.getUserMedia({audio:true}); stream.getTracks().forEach(t=>t.stop()); toast('麦克风权限已允许'); await refreshMicPermission(); }catch(e){ toast(e&&e.name==='NotAllowedError'?'你没有允许麦克风权限':'无法访问麦克风，请检查系统设置'); await refreshMicPermission(); } });
 $('notifyToggle').addEventListener('change',e=>{
   if(!e.target.checked){ appSet.notify=false; saveSet(); return; }
   if(!('Notification' in window)){ e.target.checked=false; toast('当前环境不支持系统通知'); return; }
@@ -2491,14 +2519,26 @@ const oldLoad=$('bkLoad'), newLoad=oldLoad.cloneNode(true); oldLoad.replaceWith(
 newLoad.addEventListener('click',()=>dataModal('导入备份','选择备份文件（分卷请一次全选），或把文本粘贴到下面','',false,[['选择文件（可多选）','confirm',()=>{ closeData(); triggerFilePicker('.json,.txt,application/json',list=>importTexts(list.map(decDU)),true); }],['导入粘贴内容','confirm',()=>{ const t=$('dataText').value; closeData(); importTexts([t]); }],['取消','cancel',closeData]]));
 /* 我发语音：录音 / 上传音频 */
 let recS=null;
-function micMenu(){ return new Promise(res=>showChoiceSheet([{label:'录音发送（调用手机麦克风，再点一次停止）',onClick:()=>res('rec')},{label:'把输入框文字发成伪语音（不能播放）',onClick:()=>res('fake')},{label:'上传音频发送',onClick:()=>res('file')}])); }
+function micMenu(){ return new Promise(res=>showChoiceSheet([
+  {label:'录音发送（调用手机麦克风，再点一次停止）',onClick:()=>{
+    // iOS Safari 要求 getUserMedia 在用户点击的同步调用栈内触发，不能先 await 菜单 Promise。
+    if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ res({type:'error',error:new Error('当前环境不支持麦克风，请确认 HTTPS 和顶层页面')}); return; }
+    let streamPromise; try{ streamPromise=navigator.mediaDevices.getUserMedia({audio:true}); }catch(error){ streamPromise=Promise.reject(error); }
+    res({type:'rec',streamPromise});
+  }},
+  {label:'把输入框文字发成伪语音（不能播放）',onClick:()=>res({type:'fake'})},
+  {label:'上传音频发送',onClick:()=>res({type:'file'})}
+])); }
 $('voRec').addEventListener('click',async()=>{ if(recS){ recS.mr.stop(); return; }
-  const pk=await micMenu(); if(pk==='fake'){ const t=$('msgInput').value.trim(); if(!t){ toast('先在输入框里打字，再点这里选“伪语音”'); return; } sendVoice({text:t}); $('msgInput').value=''; autoGrow($('msgInput')); refreshSend(); return; } if(pk==='file'){ vf2.click(); return; } if(pk!=='rec') return;
-  try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}), chunks=[], mr=new MediaRecorder(st); recS={mr,t0:Date.now()}; $('voRec').classList.add('rec');
-    mr.ondataavailable=e=>chunks.push(e.data);
-    mr.onstop=async()=>{ st.getTracks().forEach(t=>t.stop()); const dur=Math.max(1,Math.round((Date.now()-recS.t0)/1000)); recS=null; $('voRec').classList.remove('rec'); const blob=new Blob(chunks,{type:mr.mimeType||'audio/mp4'}), id=uid();
-      try{ await auPut(id,blob); }catch(e){ memBlobs[id]=URL.createObjectURL(blob); } sendVoice({src:'idb:'+id,text:'',dur}); };
-    mr.start(); }catch(e){ recS=null; micFail(); } });
+  const choice=await micMenu();
+  if(choice.type==='fake'){ const t=$('msgInput').value.trim(); if(!t){ toast('先在输入框里打字，再点这里选“伪语音”'); return; } sendVoice({text:t}); $('msgInput').value=''; autoGrow($('msgInput')); refreshSend(); return; }
+  if(choice.type==='file'){ vf2.click(); return; } if(choice.type==='error'){ micFail(choice.error); return; } if(choice.type!=='rec') return;
+  let st=null; try{ st=await choice.streamPromise; if(!window.MediaRecorder) throw new Error('当前浏览器不支持 MediaRecorder'); const chunks=[], mr=new MediaRecorder(st); recS={mr,t0:Date.now()}; $('voRec').classList.add('rec');
+    mr.ondataavailable=e=>chunks.push(e.data); mr.onerror=()=>{ st.getTracks().forEach(t=>t.stop()); recS=null; $('voRec').classList.remove('rec'); toast('录音发生错误，请重试'); };
+    mr.onstop=async()=>{ const started=recS&&recS.t0; st.getTracks().forEach(t=>t.stop()); const dur=Math.max(1,Math.round((Date.now()-(started||Date.now()))/1000)); recS=null; $('voRec').classList.remove('rec'); const blob=new Blob(chunks,{type:mr.mimeType||'audio/mp4'}), id=uid(); try{ await auPut(id,blob); }catch(e){ memBlobs[id]=URL.createObjectURL(blob); } if(blob.size) sendVoice({src:'idb:'+id,text:'',dur}); else toast('没有录到音频，请检查麦克风权限'); };
+    mr.start();
+  }catch(e){ if(st) st.getTracks().forEach(t=>t.stop()); recS=null; $('voRec').classList.remove('rec'); micFail(e); }
+});
 const vf2=document.createElement('input'); vf2.type='file'; vf2.accept='audio/*'; vf2.style.display='none'; document.body.appendChild(vf2);
 vf2.addEventListener('change',async()=>{ const f=(vf2.files||[])[0]; vf2.value=''; if(!f) return; const id=uid(); try{ await auPut(id,f); }catch(e){ memBlobs[id]=URL.createObjectURL(f); } sendVoice({src:'idb:'+id,text:f.name.replace(/\.[^.]+$/,'')}); });
 
@@ -2586,9 +2626,33 @@ function syncThemeSeg(){ renderSeg('themeSeg',[['auto','跟随手机'],['light',
 try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme); }catch(e){}
 ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
 
-/* ===== 键盘弹出时跟随可视区域 ===== */
-(function(){ const reset=()=>{ if(window.scrollX||window.scrollY) window.scrollTo(0,0); document.body.scrollTop=0; document.documentElement.scrollTop=0; };
-  document.addEventListener('focusout',()=>{ setTimeout(reset,60); setTimeout(reset,350); }); if(window.visualViewport){ visualViewport.addEventListener('resize',reset); visualViewport.addEventListener('scroll',reset); } })();
+/* ===== 键盘弹出时跟随 iOS 可视区域 ===== */
+(function(){
+  const root=document.documentElement;
+  let raf=0;
+  const update=()=>{
+    cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(()=>{
+      const vv=window.visualViewport;
+      const h=vv&&vv.height?vv.height:window.innerHeight;
+      const top=vv&&Number.isFinite(vv.offsetTop)?vv.offsetTop:0;
+      root.style.setProperty('--app-vh',Math.round(h)+'px');
+      root.style.setProperty('--vv-top',Math.round(top)+'px');
+      const el=document.activeElement;
+      const isTyping=!!(el&&(/^(TEXTAREA|INPUT)$/.test(el.tagName)));
+      const keyboard=!!(isTyping&&vv&&vv.height<window.innerHeight-120);
+      document.body.classList.toggle('keyboard-open',keyboard);
+    });
+  };
+  update();
+  window.addEventListener('resize',update,{passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',update,{passive:true});
+    window.visualViewport.addEventListener('scroll',update,{passive:true});
+  }
+  document.addEventListener('focusin',update);
+  document.addEventListener('focusout',()=>setTimeout(update,250));
+})();
 /* ===== 手机自带录音（文件输入 capture） ===== */
 /* ===== 倒数日 / 纪念日 ===== */
 function cdDays(it){ if(it.cal==='lunar') return daysToLunar(it.lm,it.ld); return it.date?widgetDays(it.date):null; }
@@ -2704,7 +2768,7 @@ $('settingsBtn').addEventListener('click',syncFollowUI);
 $('gReplyToggle').addEventListener('change',e=>{ const r=curRole(); r.gReply=e.target.checked; if(r.gReply) pullGlobal(r,'reply'); saveRoles(); syncFollowUI(); });
 $('gActToggle').addEventListener('change',e=>{ const r=curRole(); r.gAct=e.target.checked; if(r.gAct) pullGlobal(r,'act'); saveRoles(); syncFollowUI(); });
 (function(){ if(!homeLayout.some(i=>i.app==='global')){ const mu=homeLayout.find(i=>i.app==='music'), it={id:'app-global',type:'app',app:'global',w:1,h:1,x:0,y:0,p:0}; let sp=null;
-  if(mu){ it.p=mu.p||0; if(mu.y+1<ROWS&&!occupied(it,mu.x,mu.y+1,it.p)) sp=[mu.x,mu.y+1,it.p]; } if(!sp) sp=findSpot(it,0,0); it.x=sp[0]; it.y=sp[1]; it.p=sp[2]; homeLayout.push(it); saveHome(); } })();
+  if(mu){ it.p=mu.p||0; if(mu.y+1<ROWS&&!occupied(it,mu.x,mu.y+1,it.p)) sp=[mu.x,mu.y+1,it.p]; } if(!sp) sp=findSpot(it,0,0); it.x=sp[0]; it.y=sp[1]; it.p=sp[2]; homeLayout.push(it); saveHome(); renderHome(); } })();
 
 /* ===== 倒数日 / 纪念日：手动输入或滑动选择 · 公历或农历 · 每年循环或永不循环 ===== */
 var LUNAR_FMT_C; function lunarFmt(){ if(LUNAR_FMT_C===undefined){ try{ LUNAR_FMT_C=new Intl.DateTimeFormat('en-u-ca-chinese',{year:'numeric',month:'numeric',day:'numeric'}); }catch(e){ LUNAR_FMT_C=null; } } return LUNAR_FMT_C; }
@@ -2827,7 +2891,7 @@ function bumpMoments(){ try{ refreshDots(); }catch(e){} }
 
 /* ===== 麦克风：直接调用；不行再提示 ===== */
 function sendFakeFromInput(){ const t=$('msgInput').value.trim(); if(!t){ toast('先在输入框里打字，再选“伪语音”'); return; } sendVoice({text:t}); $('msgInput').value=''; autoGrow($('msgInput')); refreshSend(); }
-function micFail(){ toast('当前打开方式没有麦克风权限，换个方式发语音'); showChoiceSheet([{label:'把输入框里的文字发成伪语音',onClick:sendFakeFromInput},{label:'上传一段音频发送',onClick:()=>vf2.click()}]); }
+function micFail(error){ const n=error&&error.name||''; const msg=n==='NotAllowedError'||n==='SecurityError'?'麦克风权限被系统或浏览器拦截，请在 iPhone 设置或 Safari 网站设置中允许麦克风。':n==='NotFoundError'?'没有检测到可用的麦克风。':n==='NotReadableError'?'麦克风正被其他应用占用，或系统暂时无法读取。':(error&&error.message)||'未知原因'; toast('无法启动录音：'+msg); showChoiceSheet([{label:'把输入框里的文字发成伪语音',onClick:sendFakeFromInput},{label:'上传一段音频发送',onClick:()=>vf2.click()}]); }
 
 /* ===== 图片消息 ===== */
 function compressImg(src,max,q){ return new Promise(res=>{ if(!/^data:image/.test(src)||/^data:image\/(gif|svg)/.test(src)){ res(src); return; } const i=new Image(); i.onload=()=>{ try{ const k=Math.min(1,max/Math.max(i.width,i.height)), c=document.createElement('canvas'); c.width=Math.round(i.width*k); c.height=Math.round(i.height*k); c.getContext('2d').drawImage(i,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',q)); }catch(e){ res(src); } }; i.onerror=()=>res(src); i.src=src; }); }
