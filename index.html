@@ -1214,6 +1214,22 @@ body{position:relative!important;inset:auto!important;background:var(--bg)!impor
 #screen-chat>footer{flex:0 0 auto!important;box-sizing:border-box!important;margin:0!important;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;}
 body.keyboard-open #screen-chat{top:var(--vv-top,0px)!important;bottom:auto!important;height:var(--app-vh,100dvh)!important;max-height:var(--app-vh,100dvh)!important;}
 body.keyboard-open #screen-chat>footer{padding-bottom:8px!important;}
+
+/* ===== 流畅交互与液态玻璃消息提示 ===== */
+#sendBtn{transition:background .12s ease,opacity .12s ease,transform .12s ease!important;will-change:background,opacity; -webkit-tap-highlight-color:transparent;}
+#sendBtn:active{transform:scale(.94);}
+#sendBtn.go{transition:background .12s ease,opacity .12s ease,transform .12s ease!important;}
+#screen-chat #chat{contain:layout style;}
+#screen-chat .msg-group{contain:layout style;}
+#flowGlassNotice{position:fixed;z-index:5000;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;max-width:560px;margin:0 auto;padding:12px 14px;border:1px solid rgba(255,255,255,.38);border-radius:22px;background:rgba(245,247,250,.72);color:#20232a;box-shadow:0 10px 34px rgba(20,28,40,.18),inset 0 1px 0 rgba(255,255,255,.68);backdrop-filter:blur(24px) saturate(1.65);-webkit-backdrop-filter:blur(24px) saturate(1.65);display:flex;align-items:center;gap:11px;opacity:0;transform:translate3d(0,-18px,0) scale(.985);pointer-events:none;transition:opacity .22s ease,transform .28s cubic-bezier(.2,.8,.2,1);will-change:transform,opacity;}
+#flowGlassNotice.show{opacity:1;transform:translate3d(0,0,0) scale(1);pointer-events:auto;}
+#flowGlassNotice .fg-avatar{width:38px;height:38px;flex:0 0 38px;border-radius:50%;overflow:hidden;background:rgba(120,130,145,.16);display:grid;place-items:center;font-weight:650;}
+#flowGlassNotice .fg-copy{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px;}
+#flowGlassNotice .fg-name{font-size:13px;font-weight:650;line-height:1.2;}
+#flowGlassNotice .fg-text{font-size:13px;line-height:1.35;opacity:.82;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#flowGlassNotice .fg-mark{font-size:11px;opacity:.52;align-self:flex-start;}
+@media(prefers-color-scheme:dark){#flowGlassNotice{background:rgba(34,37,43,.76);border-color:rgba(255,255,255,.18);color:#f5f6f8;box-shadow:0 10px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.12);}}
+@media(prefers-reduced-motion:reduce){#sendBtn,#flowGlassNotice{transition:none!important;}}
 </style>
 
 <script>
@@ -1369,9 +1385,16 @@ function curRole(){ return roles.find(r=>r.id===curRoleId); }
 function el(t,c){ const e=document.createElement(t); if(c) e.className=c; return e; }
 function nm(who,by){ const r=curRole(); if(who==='me') return r.myName; if(r.isGroup&&by){ const x=roles.find(z=>z.id===by); if(x) return x.name; } return r.name; }
 function openChat(id){
-  curRoleId=id; curHistory=safeGet('app_msgs_'+id,[]); replyTarget=null; replying=false; pending=false; pendingText=false; replyToken++; typingOn=false; typingRow=null; selMode=false; $('screen-chat').classList.remove('selmode');
+  const sameConversation=curRoleId===id;
+  // 返回同一段聊天时保留正在进行的回复任务，不重置 token / 输入状态。
+  if(!sameConversation){ curRoleId=id; curHistory=safeGet('app_msgs_'+id,[]); replyTarget=null; replying=false; pending=false; pendingText=false; replyToken++; typingOn=false; typingRow=null; }
+  else { curHistory=safeGet('app_msgs_'+id,curHistory); }
+  selMode=false; $('screen-chat').classList.remove('selmode');
   $('replyPreview').style.display='none'; $('plusPanel').classList.remove('open'); $('menuBtn').classList.remove('on');
-  applyRoleTheme(); renderChat(); renderMenuCards(); renderStickers(); renderVoices(); panelTab=''; renderPanelTab(); refreshSend(); show('screen-chat');
+  applyRoleTheme(); show('screen-chat');
+  // 先完成页面切换，再在下一帧绘制消息；非首屏面板延后，避免点击人物时同步堆叠大量 DOM 工作。
+  const paint=()=>{ renderChat(); refreshSend(); requestAnimationFrame(()=>{ renderMenuCards(); renderStickers(); renderVoices(); panelTab=''; renderPanelTab(); }); };
+  if(window.requestAnimationFrame) requestAnimationFrame(paint); else paint();
 }
 function applyRoleTheme(){
   const r=curRole(); if(!r) return;
@@ -3064,6 +3087,25 @@ const _art=applyRoleTheme; applyRoleTheme=function(){ _art(); applyChatWpText();
 function applyNames(){ const d={chat:'流语',cards:'存箴',decor:'缀隅',letters:'缄书',music:'闻韶',settings:'衡枢',global:'掌枢'}, nmz=decor.names||{};
   document.querySelectorAll('.app-tile').forEach(t=>{ const k=t.dataset.app; t.querySelector('.app-label').textContent=nmz[k]||d[k]; });
   document.querySelector('#screen-cardapp .title').textContent=nmz.cards||d.cards; document.querySelector('#screen-decor .title').textContent=nmz.decor||d.decor; document.querySelector('#screen-letters .title').textContent=nmz.letters||d.letters; document.querySelector('#screen-music .title').textContent=nmz.music||d.music; }
+
+/* ===== 非聊天页面的顶部液态玻璃消息通知 ===== */
+let flowNoticeTimer=null;
+function showFlowGlassNotice(m){
+  if(!m||m.who!=='them'||m.type==='sys') return;
+  const chatVisible=$('screen-chat').classList.contains('active') && curRoleId;
+  if(chatVisible) return;
+  let n=$('flowGlassNotice');
+  if(!n){ n=document.createElement('div'); n.id='flowGlassNotice'; n.setAttribute('role','button'); n.setAttribute('aria-live','polite'); n.innerHTML='<div class="fg-avatar"></div><div class="fg-copy"><div class="fg-name"></div><div class="fg-text"></div></div><div class="fg-mark">新消息</div>'; document.body.appendChild(n); }
+  const noticeRoleId=curRoleId; const r=curRole(), avatar=n.querySelector('.fg-avatar');
+  n.querySelector('.fg-name').textContent=r?r.name:'新消息';
+  n.querySelector('.fg-text').textContent=m.type==='voice'?'[语音]':(m.text||'[新消息]');
+  avatar.innerHTML=r?avatarHTML(r.name,r.avatar):(r&&r.name?r.name.slice(0,1):'');
+  n.onclick=()=>{ if(noticeRoleId) openChat(noticeRoleId); n.classList.remove('show'); };
+  n.classList.add('show'); clearTimeout(flowNoticeTimer);
+  flowNoticeTimer=setTimeout(()=>n.classList.remove('show'),4600);
+}
+const _flowAddMsg=addMsg;
+addMsg=function(o){ const m=_flowAddMsg(o); if(m&&m.who==='them') showFlowGlassNotice(m); return m; };
 applyDecor(); applyFont(); applyNames(); applyColors(); applySB();
 })();
 </script>
