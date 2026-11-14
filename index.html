@@ -638,7 +638,7 @@ body.keyboard-open #screen-chat>footer{padding-bottom:8px;}
 /* ===== 最终修复：底栏贴底 / 引用卡与外气泡同宽 / 流畅度 ===== */
 html,body{background:var(--bg)!important;}
 /* 页面用 top/bottom:0 直接贴住视口，不再依赖 100dvh（iOS 上 dvh 会少算导致底部悬空） */
-.screen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;height:auto!important;max-height:none!important;}
+.screen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:calc(-1 * var(--botext,0px))!important;width:100%!important;height:auto!important;min-height:var(--fullh,0px)!important;max-height:none!important;}
 /* 底栏：安全区只留一半，输入框贴近底边，背景仍铺满到屏幕底 */
 #screen-chat>footer{padding:8px 10px max(8px,calc(env(safe-area-inset-bottom,0px) - 12px))!important;}
 body.keyboard-open #screen-chat>footer{padding-bottom:8px!important;}
@@ -655,6 +655,9 @@ button,.bubble,.tcard,.qcard,.pcard,.tile{touch-action:manipulation;}
 .me .bubble.new{transform-origin:right bottom;} .them .bubble.new{transform-origin:left bottom;}
 #sendBtn{will-change:auto!important;}
 #chat{overscroll-behavior:contain;}
+#screen-home.screen,#screen-contacts.screen,#screen-chat.screen,#screen-profile.screen,#screen-letters.screen,#screen-settings.screen,#screen-global.screen,#screen-music.screen,#screen-cardapp.screen,#screen-decor.screen{top:0!important;bottom:calc(-1 * var(--botext,0px))!important;height:auto!important;min-height:var(--fullh,0px)!important;max-height:none!important;}
+*{touch-action:manipulation;}
+html,body{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;height:100%!important;overflow:hidden!important;overscroll-behavior:none!important;}
 </style>
 </head>
 <body>
@@ -819,8 +822,11 @@ button,.bubble,.tcard,.qcard,.pcard,.tile{touch-action:manipulation;}
     <div class="field-row"><label>页面主题</label><div class="seg" id="themeSeg" style="flex:1;"></div></div>
     <div class="field-row"><label>显示状态栏</label><label class="switch"><input type="checkbox" id="sbToggle"><span class="slider"></span></label></div>
     <div class="field-row"><label>顶部避让</label><input type="range" id="topOff" min="0" max="140" step="2" value="0" style="flex:1;"><span id="topOffVal" style="width:46px;text-align:right;font-size:calc(var(--fs)*0.929);color:var(--sub);">0px</span></div>
+    <div class="field-row"><label>底部延伸</label><input type="range" id="botExt" min="0" max="140" step="2" value="0" style="flex:1;"><span id="botExtVal" style="width:46px;text-align:right;font-size:calc(var(--fs)*0.929);color:var(--sub);">0px</span></div>
+    <div class="sheet-sub">底栏离屏幕底边有空隙时，把“底部延伸”往右拉到贴合为止；顶部被刘海/状态栏压住时用“顶部避让”。</div>
     <div class="sheet-sub">若希望页面更接近全屏显示，建议使用 Safari 打开，并通过分享菜单选择“添加到主屏幕”，之后从桌面图标启动。不同浏览器和托管容器对状态栏区域的控制能力不同，网页无法覆盖系统自身的界面。</div>
     <button class="btn-mini" id="fsBtn" style="align-self:flex-start;">尝试进入全屏</button>
+    <button class="btn-mini" id="vpDiag" style="align-self:flex-start;">视口诊断（截图发给我）</button>
     <div class="sec-title">软件图标与名称</div>
     <div class="field-row"><label>图标颜色</label><div class="avpick"><input type="color" id="iconColor" value="#ff6b8f"><button class="btn-mini" id="resetIconColor">恢复默认</button></div></div>
     <div class="field-row"><label>图案颜色</label><div class="avpick"><input type="color" id="iconGlyph" value="#ffffff"><button class="btn-mini" id="resetIconGlyph">自动</button></div></div>
@@ -2732,10 +2738,13 @@ function renderListen(it,e){ const b=e.querySelector('.hw-in');
   HM.addEventListener('touchend',end); HM.addEventListener('touchcancel',end); })();
 
 /* ===== 状态栏开关 / 顶部避让 / 字卡全局搜索 ===== */
-function applySB(){ applyTheme(); const rt=document.documentElement; rt.style.setProperty('--topoff',(decor.topOff||0)+'px'); const sa=(window.navigator.standalone===true)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches); rt.classList.toggle('nosb',decor.showStatus!==true); rt.classList.toggle('standalone',!!sa); }
-function syncSBInputs(){ syncThemeSeg(); $('sbToggle').checked=decor.showStatus===true; $('topOff').value=decor.topOff||0; $('topOffVal').textContent=(decor.topOff||0)+'px'; }
+function applySB(){ applyTheme(); const rt=document.documentElement; rt.style.setProperty('--topoff',(decor.topOff||0)+'px'); rt.style.setProperty('--botext',(decor.botExt||0)+'px'); const sa=(window.navigator.standalone===true)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches); rt.classList.toggle('nosb',decor.showStatus!==true); rt.classList.toggle('standalone',!!sa); }
+function syncSBInputs(){ syncThemeSeg(); $('sbToggle').checked=decor.showStatus===true; $('topOff').value=decor.topOff||0; $('botExt').value=decor.botExt||0; $('botExtVal').textContent=(decor.botExt||0)+'px'; $('topOffVal').textContent=(decor.topOff||0)+'px'; }
 $('sbToggle').addEventListener('change',e=>{ decor.showStatus=e.target.checked; saveDecor(); });
 $('topOff').addEventListener('input',e=>{ decor.topOff=Number(e.target.value)||0; $('topOffVal').textContent=decor.topOff+'px'; saveDecor(); });
+$('botExt').addEventListener('input',e=>{ decor.botExt=Number(e.target.value)||0; $('botExtVal').textContent=decor.botExt+'px'; saveDecor(); });
+$('vpDiag').addEventListener('click',()=>{ const p=document.createElement('div'); p.style.cssText='position:fixed;left:0;top:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;'; document.body.appendChild(p); const cs=getComputedStyle(p), vv=window.visualViewport, f=document.querySelector('#screen-chat>footer'), sc=$('screen-chat'), fr=f&&f.getBoundingClientRect(), sr=sc&&sc.getBoundingClientRect();
+  const lines=['standalone: '+(navigator.standalone===true)+' / '+(matchMedia('(display-mode: standalone)').matches),'innerH: '+innerHeight+'  screenH: '+screen.height+'  clientH: '+document.documentElement.clientHeight,'vv.h: '+(vv?Math.round(vv.height):'-')+'  vv.top: '+(vv?Math.round(vv.offsetTop):'-')+'  scrollY: '+scrollY,'safe 上/下: '+cs.paddingTop+' / '+cs.paddingBottom,'--fullh: '+getComputedStyle(document.documentElement).getPropertyValue('--fullh')+'  topOff: '+(decor.topOff||0)+'  botExt: '+(decor.botExt||0),'chat页 top/bottom: '+(sr?Math.round(sr.top)+' / '+Math.round(sr.bottom):'-'),'底栏 top/bottom: '+(fr?Math.round(fr.top)+' / '+Math.round(fr.bottom):'(聊天页没打开)'),'keyboard-open: '+document.body.classList.contains('keyboard-open')]; p.remove(); alert(lines.join('\n')); });
 $('fsBtn').addEventListener('click',()=>{ const d=document.documentElement; if(d.requestFullscreen) d.requestFullscreen().catch(()=>toast('这里不允许全屏，请用“添加到主屏幕”打开')); else toast('这个浏览器不支持网页全屏，请用“添加到主屏幕”打开'); });
 function runCardSearch(){ const q=$('cardAppSearch').value.trim().toLowerCase(), box=$('cardAppResults'); if(!q){ box.style.display='none'; box.innerHTML=''; return; }
   const out=[], add=(tag,text)=>{ if(text&&text.toLowerCase().indexOf(q)>=0) out.push([tag,text]); }, pf=c=>c.text+(c.suffix?' · '+c.suffix:'');
@@ -2810,19 +2819,34 @@ ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentCol
       st.setProperty('top',Math.max(0,Math.round(vv.offsetTop))+'px','important');
       st.setProperty('bottom','auto','important');
       st.setProperty('height',Math.round(vv.height)+'px','important');
-      st.setProperty('max-height',Math.round(vv.height)+'px','important');
+      st.setProperty('max-height',Math.round(vv.height)+'px','important'); st.setProperty('min-height','0px','important');
     }else{
-      ['top','bottom','height','max-height'].forEach(p=>st.removeProperty(p));
+      ['top','bottom','height','max-height','min-height'].forEach(p=>st.removeProperty(p));
       if(window.scrollY) window.scrollTo(0,0);
     }
     if(ch&&nearBottom) requestAnimationFrame(()=>{ ch.scrollTop=ch.scrollHeight; });
   };
+  const fit=()=>{
+    const sa=(navigator.standalone===true)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+    if(!sa){ root.style.removeProperty('--fullh'); return; }
+    const land=window.innerWidth>window.innerHeight, sh=Math.max(screen.width,screen.height), sw=Math.min(screen.width,screen.height);
+    root.style.setProperty('--fullh',(land?sw:sh)+'px');
+  };
+  const nudge=()=>{ try{ const sa=(navigator.standalone===true)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches); if(!sa) return; const need=Math.max(screen.width,screen.height); if(window.innerHeight>=need-8||window.innerWidth>window.innerHeight) return;
+      const m=document.querySelector('meta[name="viewport"]'); if(!m) return; const c=m.getAttribute('content'); m.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover'); setTimeout(()=>{ m.setAttribute('content',c); fit(); apply(); },60); }catch(e){} };
+  fit(); window.addEventListener('orientationchange',()=>setTimeout(fit,300)); window.addEventListener('resize',fit,{passive:true});
+  [250,900,2000].forEach(t=>setTimeout(nudge,t)); window.addEventListener('pageshow',()=>setTimeout(nudge,200)); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(nudge,200); });
   apply();
   window.addEventListener('resize',apply,{passive:true});
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize',apply,{passive:true});
     window.visualViewport.addEventListener('scroll',apply,{passive:true});
   }
+  const snap=()=>{ try{ if(window.scrollX||window.scrollY) window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; }catch(e){} };
+  const snapSoon=()=>{ snap(); setTimeout(snap,80); setTimeout(snap,300); setTimeout(snap,800); };
+  ['pageshow','orientationchange','visibilitychange','focusout'].forEach(ev=>window.addEventListener(ev,snapSoon));
+  window.addEventListener('scroll',snap,{passive:true});
+  if(window.visualViewport) window.visualViewport.addEventListener('scroll',()=>{ const v=window.visualViewport; if(!document.body.classList.contains('keyboard-open')&&(v.offsetTop||v.pageTop)) snapSoon(); },{passive:true});
   document.addEventListener('focusin',apply);
   document.addEventListener('focusout',()=>{ setTimeout(apply,60); setTimeout(apply,350); });
 })();
