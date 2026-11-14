@@ -1146,18 +1146,53 @@ body.keyboard-open #screen-chat>footer{
 
 
 
-/* ===== 通话悬浮窗缩小 ===== */
-.call-mini{
-  gap:5px!important;
-  padding:3px 4px 3px 9px!important;
-  border-radius:18px!important;
-  font-size:12px!important;
-  line-height:1.1!important;
-  box-shadow:0 2px 9px rgba(0,0,0,.28)!important;
+
+
+/* ===== iPhone Safari / 主屏幕视口统一修复 ===== */
+:root{--app-vh:100dvh;--vv-top:0px;padding:0!important;box-sizing:border-box;}
+html,body{
+  width:100%!important;height:100%!important;min-height:100%!important;
+  margin:0!important;padding:0!important;overflow:hidden!important;
+  overscroll-behavior:none;
 }
-.cm-dot{width:6px!important;height:6px!important;flex:0 0 6px!important;}
-#cmHang{width:23px!important;height:23px!important;flex:0 0 23px!important;}
-#cmHang .ic{width:12px!important;height:12px!important;}
+body{position:relative;background:var(--bg);}
+.screen{
+  position:fixed!important;left:0!important;right:0!important;top:0!important;bottom:auto!important;
+  width:100%!important;height:100dvh!important;min-height:0!important;
+  margin:0!important;overflow:hidden!important;
+}
+/* 页面内容铺满 Safari 当前网页视口；浏览器自己的工具栏不属于网页可绘制区域 */
+#screen-chat{display:none;flex-direction:column;min-height:0!important;}
+#screen-chat.active{display:flex!important;}
+#screen-chat>header{flex:0 0 auto!important;}
+#screen-chat>#chat{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;}
+#screen-chat>.reply-preview,#screen-chat>.selbar,#screen-chat>.plus-panel,#screen-chat>footer{flex-shrink:0!important;}
+#screen-chat>footer{
+  box-sizing:border-box!important;width:100%!important;margin:0!important;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))!important;
+  background:var(--bg)!important;
+}
+/* 键盘弹出后只让聊天页跟随可视区域，输入栏紧贴键盘上沿 */
+body.keyboard-open #screen-chat{
+  top:var(--vv-top,0px)!important;height:var(--app-vh,100dvh)!important;
+}
+body.keyboard-open #screen-chat>footer{padding-bottom:8px!important;}
+/* 底部导航背景覆盖安全区，按钮留在安全区上方；安全区只计算一次 */
+#tabbar,.tabbar{
+  box-sizing:border-box!important;flex:0 0 auto!important;width:100%!important;margin:0!important;
+  padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))!important;
+  background:var(--header-bg)!important;
+}
+/* 气泡内引用卡片与外层回复气泡同宽，不再按引用文字单独收窄 */
+.bubble-wrap .bubble.bq{
+  display:block!important;box-sizing:border-box!important;width:100%!important;
+  min-width:0!important;max-width:100%!important;
+}
+.bubble-wrap .bubble.bq .quote-card{
+  display:block!important;box-sizing:border-box!important;width:100%!important;
+  min-width:0!important;max-width:none!important;
+}
+.bubble-wrap .bubble.bq .rt{display:block!important;width:100%!important;box-sizing:border-box!important;}
 
 </style>
 
@@ -2690,7 +2725,7 @@ function syncThemeSeg(){ renderSeg('themeSeg',[['auto','跟随手机'],['light',
 try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme); }catch(e){}
 ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
 
-/* ===== 键盘弹出时跟随 iOS 可视区域 ===== */
+/* ===== iOS 视口：仅键盘打开时使用 visualViewport ===== */
 (function(){
   const root=document.documentElement;
   let raf=0;
@@ -2698,14 +2733,19 @@ ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentCol
     cancelAnimationFrame(raf);
     raf=requestAnimationFrame(()=>{
       const vv=window.visualViewport;
-      const h=vv&&vv.height?vv.height:window.innerHeight;
-      const top=vv&&Number.isFinite(vv.offsetTop)?vv.offsetTop:0;
-      root.style.setProperty('--app-vh',Math.round(h)+'px');
-      root.style.setProperty('--vv-top',Math.round(top)+'px');
       const el=document.activeElement;
       const isTyping=!!(el&&(/^(TEXTAREA|INPUT)$/.test(el.tagName)));
-      const keyboard=!!(isTyping&&vv&&vv.height<window.innerHeight-120);
+      const layoutH=window.innerHeight||root.clientHeight;
+      const keyboard=!!(isTyping&&vv&&vv.height<layoutH-120);
       document.body.classList.toggle('keyboard-open',keyboard);
+      if(keyboard){
+        root.style.setProperty('--app-vh',Math.round(vv.height)+'px');
+        root.style.setProperty('--vv-top',Math.max(0,Math.round(vv.offsetTop||0))+'px');
+      }else{
+        /* 非键盘状态交给 100dvh 跟随 Safari 工具栏伸缩，避免沿用旧的缩小高度 */
+        root.style.setProperty('--app-vh','100dvh');
+        root.style.setProperty('--vv-top','0px');
+      }
     });
   };
   update();
@@ -2716,8 +2756,7 @@ ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentCol
   }
   document.addEventListener('focusin',update);
   document.addEventListener('focusout',()=>setTimeout(update,250));
-})();
-/* ===== 手机自带录音（文件输入 capture） ===== */
+})(); 
 /* ===== 倒数日 / 纪念日 ===== */
 function cdDays(it){ if(it.cal==='lunar') return daysToLunar(it.lm,it.ld); return it.date?widgetDays(it.date):null; }
 function renderCountdown(it,e){ const b=e.querySelector('.hw-in'), big=(it.h||1)>=2; b.className='hw-in'+(big?' cd-big':'')+(it.bg?' cd-bg':'');
