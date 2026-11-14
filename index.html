@@ -2874,7 +2874,7 @@ async function bkDeliver(files){ const fl=files.map(f=>new File([f.blob],f.name,
   try{ if(navigator.canShare&&navigator.canShare({files:fl})){ await navigator.share({files:fl,title:'流语备份'}); return true; } }catch(e){ if(e&&e.name==='AbortError') return true; }
   try{ fl.forEach((f,i)=>setTimeout(()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); },i*600)); return true; }catch(e){ return false; } }
 const BK_G=[['chat','聊天记录',k=>/^app_msgs_/.test(k)],['roles','角色与各项设置',k=>/^app_(roles|global|pro_next|set)/.test(k)],['cards','通用字卡、表情包、拍一拍、语音',k=>/^app_shared_/.test(k)],['moments','朋友圈与“我的”资料',k=>k==='app_moments'||k==='app_me'],['letters','信件',k=>k==='app_letters'],['decor','装饰、桌面与预设',k=>/^app_(decor|home|beauty|font|css)|preset/.test(k)],['music','音乐曲库与歌单',k=>k==='app_music'],['other','其他',()=>true]];
-let bkMethod='single', bkSel={};
+let bkMethod='single', bkSel={}, bkComp=true;
 function auAll(){ return auDB.then(db=>new Promise(res=>{ const out={}; const rq=db.transaction('f').objectStore('f').openCursor(); rq.onsuccess=()=>{ const c=rq.result; if(c){ out[c.key]=c.value; c.continue(); } else res(out); }; rq.onerror=()=>res(out); })).catch(()=>({})); }
 function bkGroups(){ const keys=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('app_')===0) keys.push(k); }
   const gs=BK_G.map(g=>({id:g[0],label:g[1],keys:[]})); keys.forEach(k=>{ for(const g of BK_G){ if(g[2](k)){ gs.find(x=>x.id===g[0]).keys.push(k); break; } } }); return gs.filter(g=>g.keys.length); }
@@ -2886,6 +2886,7 @@ function bkDialog(){ const gs=bkGroups(), body=$('bkExpBody'); body.innerHTML=''
     row.children[0].textContent=g.label; row.children[1].textContent=g.id==='audio'?'':kb(sz); const cb=row.querySelector('input'); cb.checked=bkSel[g.id]; cb.addEventListener('change',()=>{ bkSel[g.id]=cb.checked; }); body.appendChild(row); });
   sec('导出方式'); const mm=[['single','单个文件','最简单；文件大时手机可能保存不了'],['split','分卷','拆成几个小文件，每个都能单独导入'],['zip','压缩包 (.zip)','体积小，音频也能打包，推荐文件大时用']];
   mm.forEach(([k,t,d])=>{ const row=el('div','field-row'); row.style.cursor='pointer'; row.innerHTML='<label style="width:auto;flex:1;"><b></b><div style="font-size:calc(var(--fs)*0.857);color:var(--sub);"></div></label><span class="gm-ck"></span>'; row.querySelector('b').textContent=t; row.querySelector('div').textContent=d; const ck=row.querySelector('.gm-ck'); const u=()=>{ ck.textContent=bkMethod===k?'✓':''; ck.classList.toggle('on',bkMethod===k); }; u(); row.addEventListener('click',()=>{ bkMethod=k; bkDialog(); }); body.appendChild(row); });
+  if(bkMethod!=='zip'){ sec('压缩'); const row=el('div','field-row'); row.innerHTML='<label style="width:auto;flex:1;"><b>压缩后导出（推荐）</b><div style="font-size:calc(var(--fs)*0.857);color:var(--sub);">打成 .zip，文本部分通常小一半以上；导入时自动识别</div></label><label class="switch"><input type="checkbox"><span class="slider"></span></label>'; const cb=row.querySelector('input'); cb.checked=bkComp; cb.addEventListener('change',()=>{ bkComp=cb.checked; }); body.appendChild(row); }
   $('bkExpOverlay').classList.add('open'); }
 const bkSaveBtn=$('bkSave').cloneNode(true); $('bkSave').replaceWith(bkSaveBtn); bkSaveBtn.addEventListener('click',bkDialog); $('bkExpClose').addEventListener('click',()=>$('bkExpOverlay').classList.remove('open'));
 $('bkExpGo').addEventListener('click',async()=>{ const gs=bkGroups().filter(g=>bkSel[g.id]); const wantA=!!bkSel.audio; if(!gs.length&&!wantA){ toast('至少选一项'); return; }
@@ -2897,10 +2898,12 @@ $('bkExpGo').addEventListener('click',async()=>{ const gs=bkGroups().filter(g=>b
       for(const f of files){ if(f.blob){ f.data=new Uint8Array(await f.blob.arrayBuffer()); delete f.blob; } }
       const z=await makeZip(files); await bkDeliver([{name:'流语备份-'+stamp+'.zip',blob:z}]); }
     else { const audio={}; for(const k of Object.keys(a1)) audio['i:'+k]=await blobToDataURL(a1[k]); for(const k of Object.keys(a2)) audio['a:'+k]=await blobToDataURL(a2[k]);
-      if(bkMethod==='single'){ const text=JSON.stringify({app:'suaililingxin-backup',v:2,ts:Date.now(),data,audio}); if(text.length>3e6) await bkDeliver([{name:'流语备份-'+stamp+'.json',blob:new Blob([text],{type:'application/json'})}]); else bigExport('备份',text,'流语备份-'+stamp+'.json'); }
-      else { const LIM=1500000, parts=[]; let cur={data:{},audio:{}}, sz=0; const push=()=>{ if(sz){ parts.push(cur); cur={data:{},audio:{}}; sz=0; } };
+      if(bkMethod==='single'){ const text=JSON.stringify({app:'suaililingxin-backup',v:2,ts:Date.now(),data,audio}); if(bkComp){ const zb=await makeZip([{name:'流语备份-'+stamp+'.json',data:enc.encode(text)}]); await bkDeliver([{name:'流语备份-'+stamp+'.zip',blob:zb}]); } else if(text.length>3e6) await bkDeliver([{name:'流语备份-'+stamp+'.json',blob:new Blob([text],{type:'application/json'})}]); else bigExport('备份',text,'流语备份-'+stamp+'.json'); }
+      else { const LIM=bkComp?4000000:1500000, parts=[]; let cur={data:{},audio:{}}, sz=0; const push=()=>{ if(sz){ parts.push(cur); cur={data:{},audio:{}}; sz=0; } };
         Object.keys(data).forEach(k=>{ const l=(data[k]||'').length; if(sz+l>LIM) push(); cur.data[k]=data[k]; sz+=l; }); Object.keys(audio).forEach(k=>{ const l=audio[k].length; if(sz+l>LIM) push(); cur.audio[k]=audio[k]; sz+=l; }); push();
-        const files=parts.map((pt,i)=>({name:'流语备份-'+stamp+'-第'+(i+1)+'卷（共'+parts.length+'卷）.json',blob:new Blob([JSON.stringify({app:'suaililingxin-backup',v:2,partial:true,part:i+1,of:parts.length,data:pt.data,audio:pt.audio})],{type:'application/json'})})); await bkDeliver(files); toast('已生成 '+files.length+' 个分卷，导入时每个都要导一遍'); } }
+        const files=[]; for(let i=0;i<parts.length;i++){ const pt=parts[i], base='流语备份-'+stamp+'-第'+(i+1)+'卷（共'+parts.length+'卷）', txt=JSON.stringify({app:'suaililingxin-backup',v:2,partial:true,part:i+1,of:parts.length,data:pt.data,audio:pt.audio});
+          if(bkComp) files.push({name:base+'.zip',blob:await makeZip([{name:base+'.json',data:enc.encode(txt)}])}); else files.push({name:base+'.json',blob:new Blob([txt],{type:'application/json'})}); }
+        await bkDeliver(files); toast('已生成 '+files.length+' 个分卷，导入时可一次全选'); } }
     $('bkExpOverlay').classList.remove('open'); }catch(e){ toast('导出失败：'+(e&&e.message?e.message:'未知错误')); }
   $('bkExpGo').disabled=false; $('bkExpGo').textContent='开始导出'; });
 function mergeBackup(o){ Object.keys(o.data||{}).forEach(k=>{ try{ localStorage.setItem(k,o.data[k]); }catch(e){} }); const ks=Object.keys(o.audio||{});
@@ -2910,6 +2913,60 @@ zipIn.addEventListener('change',async()=>{ const f=(zipIn.files||[])[0]; zipIn.v
     Object.keys(z).forEach(n=>{ if(n.indexOf('data/')===0) o.data[n.slice(5)]=dec.decode(z[n]); });
     showConfirm('用这个压缩包覆盖现有的对应数据？此操作无法撤销。',async()=>{ Object.keys(o.data).forEach(k=>{ try{ localStorage.setItem(k,o.data[k]); }catch(e){} });
       for(const n of Object.keys(z)){ try{ if(n.indexOf('audio2/')===0) await auPut(n.slice(7),new Blob([z[n]])); else if(n.indexOf('audio/')===0) await idbPut(n.slice(6),new Blob([z[n]])); }catch(e){} } toast('已恢复，正在刷新…'); setTimeout(()=>location.reload(),600); }); }catch(e){ toast('这个压缩包读不了：'+(e&&e.message?e.message:'')); } });
+
+/* ===== 统一导入：.json / 分卷 / .zip 可混选，一次解析全部 ===== */
+async function bkImport(items){
+  const dec=new TextDecoder(), agg={data:{},audio:[],fullCount:0,zip:false,partOf:0,parts:new Set(),legacy:{},files:items.length};
+  const addObj=o=>{
+    if(!o||typeof o!=='object') throw new Error('不是备份文件');
+    if(o.app==='suaililingxin-backup-part'){ const g=agg.legacy[o.id]=agg.legacy[o.id]||{n:o.n,c:{}}; g.c[o.i]=o.chunk; return; }
+    if(o.app!=='suaililingxin-backup'||!o.data) throw new Error('不是有效的备份');
+    Object.assign(agg.data,o.data);
+    Object.keys(o.audio||{}).forEach(k=>{ const b=dataURLToBlob(o.audio[k]); if(k.indexOf('a:')===0) agg.audio.push({st:'a',k:k.slice(2),b}); else agg.audio.push({st:'i',k:k.replace(/^i:/,''),b}); });
+    if(o.partial){ agg.partOf=Math.max(agg.partOf,o.of||0); agg.parts.add(o.part); } else agg.fullCount++;
+  };
+  const addText=t=>addObj(JSON.parse(String(t).replace(/^\uFEFF/,'').trim()));
+  for(const it of items){
+    try{
+      if(it.text!=null){ addText(it.text); continue; }
+      const u=new Uint8Array(it.buf);
+      if(u[0]===0x50&&u[1]===0x4B){
+        agg.zip=true; const z=await readZip(it.buf); let found=false;
+        for(const n of Object.keys(z)){
+          const base=n.split('/').pop(); if(!base||/\/$/.test(n)||n.indexOf('__MACOSX')===0) continue;
+          if(n.indexOf('data/')===0){ agg.data[n.slice(5)]=dec.decode(z[n]); found=true; }
+          else if(n.indexOf('audio2/')===0){ agg.audio.push({st:'a',k:n.slice(7),b:new Blob([z[n]])}); found=true; }
+          else if(n.indexOf('audio/')===0){ agg.audio.push({st:'i',k:n.slice(6),b:new Blob([z[n]])}); found=true; }
+          else if(/\.(json|txt)$/i.test(n)&&n!=='manifest.json'){ try{ addText(dec.decode(z[n])); found=true; }catch(e){} }
+        }
+        if(!found) throw new Error('压缩包里没有备份数据');
+      } else addText(dec.decode(u));
+    }catch(e){ throw new Error((it.name||'粘贴内容')+'：'+(e&&e.message?e.message:'无法识别')); }
+  }
+  for(const id of Object.keys(agg.legacy)){ const g=agg.legacy[id], have=Object.keys(g.c).length;
+    if(have!==g.n) throw new Error('旧版分卷不全：需要 '+g.n+' 个，只有 '+have+' 个');
+    let t=''; for(let i=1;i<=g.n;i++) t+=g.c[i]; addObj(JSON.parse(t)); }
+  const nd=Object.keys(agg.data).length;
+  if(!nd&&!agg.audio.length) throw new Error('没有找到可导入的数据');
+  const replace=agg.files===1&&agg.fullCount===1&&!agg.zip&&!agg.partOf;
+  let miss=''; if(agg.partOf){ const m=[]; for(let i=1;i<=agg.partOf;i++) if(!agg.parts.has(i)) m.push(i); if(m.length) miss='\n\n注意：缺少第 '+m.join('、')+' 卷，缺的部分不会被恢复。'; }
+  const msg=replace?'用这份备份覆盖现有的全部数据？此操作无法撤销。':'共解析 '+agg.files+' 个文件：'+nd+' 项数据、'+agg.audio.length+' 个音频。合并导入并覆盖同名数据？此操作无法撤销。'+miss;
+  showConfirm(msg,async()=>{
+    if(replace){ const del=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('app_')===0) del.push(k); } del.forEach(k=>localStorage.removeItem(k)); }
+    Object.keys(agg.data).forEach(k=>{ try{ localStorage.setItem(k,agg.data[k]); }catch(e){} });
+    for(const a of agg.audio){ try{ if(a.st==='a') await auPut(a.k,a.b); else await idbPut(a.k,a.b); }catch(e){} }
+    toast('已恢复，正在刷新…'); setTimeout(()=>location.reload(),600); });
+}
+const bkIn=document.createElement('input'); bkIn.type='file'; bkIn.multiple=true; bkIn.accept='.json,.txt,.zip,application/json,application/zip,application/x-zip-compressed,text/plain'; bkIn.style.display='none'; document.body.appendChild(bkIn);
+bkIn.addEventListener('change',async()=>{ const fs=[...(bkIn.files||[])]; bkIn.value=''; if(!fs.length) return;
+  toast('正在解析 '+fs.length+' 个文件…');
+  try{ const items=[]; for(const f of fs) items.push({name:f.name,buf:await f.arrayBuffer()}); await bkImport(items); }
+  catch(e){ toast('导入失败：'+(e&&e.message?e.message:'无法识别')); } });
+(function(){ const o=$('bkLoad'), n=o.cloneNode(true); o.replaceWith(n);
+  n.addEventListener('click',()=>dataModal('导入备份','可一次选多个文件：.json、分卷、.zip 都行（分卷请全选），也可粘贴备份文本','',false,[
+    ['选择文件（可多选）','confirm',()=>{ closeData(); bkIn.click(); }],
+    ['导入粘贴内容','confirm',()=>{ const t=$('dataText').value; if(!t.trim()){ toast('先粘贴备份文本'); return; } closeData(); bkImport([{name:'粘贴内容',text:t}]).catch(e=>toast('导入失败：'+(e&&e.message?e.message:'无法识别'))); }],
+    ['取消','cancel',closeData]])); })();
 /* ===== 掌枢：全局回复设置 / 对方主动行为 ===== */
 const G_REPLY=[['delayMin','最短延迟(秒)',2],['delayMax','最长延迟(秒)',8],['replyCountMin','最少条数',1],['replyCountMax','最多条数',1],['mergeCards','允许合并',false],['mergeChance','合并概率(%)',50],['mergeMin','合并最少张',2],['mergeMax','合并最多张',3]];
 const G_ACT=[['transferChance','转账概率(%)',10],['questionChance','提问概率(%)',10],['reactChance','贴表情概率(%)',15],['patChance','拍一拍概率(%)',8],['avatarChance','换头像概率(%)',5],['inviteChance','邀我换头像(%)',5],['proMin','主动联系最短间隔(分)',30],['proMax','主动联系最长间隔(分)',120],['proChance','主动发消息概率(%)',0],['callChance','来电概率(%)',0],['voiceChance','对方发语音(%)',0],['letterChance','主动来信(%)',15],['letterReplyChance','回信概率(%)',80],['letterMin','回信最快(分)',1],['letterMax','回信最慢(分)',8],['momentChance','发朋友圈概率(%)',30],['likeChance','点赞我的朋友圈(%)',50],['commentChance','评论我的朋友圈(%)',30],['replyChance','回复我的评论(%)',60]];
