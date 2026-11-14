@@ -634,6 +634,27 @@ body{height:100%;padding:0;}
 body.keyboard-open #screen-chat>footer{padding-bottom:8px;}
 @media (max-width:600px){#screen-chat>#chat{scroll-behavior:auto;}}
 
+
+/* ===== 最终修复：底栏贴底 / 引用卡与外气泡同宽 / 流畅度 ===== */
+html,body{background:var(--bg)!important;}
+/* 页面用 top/bottom:0 直接贴住视口，不再依赖 100dvh（iOS 上 dvh 会少算导致底部悬空） */
+.screen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;height:auto!important;max-height:none!important;}
+/* 底栏：安全区只留一半，输入框贴近底边，背景仍铺满到屏幕底 */
+#screen-chat>footer{padding:8px 10px max(8px,calc(env(safe-area-inset-bottom,0px) - 12px))!important;}
+body.keyboard-open #screen-chat>footer{padding-bottom:8px!important;}
+/* 顶栏去掉毛玻璃（近乎不透明，却每帧重绘），滚动更顺 */
+#screen-chat>header{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+/* 带引用的气泡：内层引用卡片拉伸到与外气泡同宽，圆角与外气泡同心 */
+.bubble-wrap .bubble.bq{display:flex!important;flex-direction:column!important;align-items:stretch!important;width:auto!important;min-width:0!important;max-width:100%!important;padding:5px!important;}
+.bubble-wrap .bubble.bq .quote-card{display:block!important;box-sizing:border-box!important;width:auto!important;min-width:0!important;max-width:none!important;align-self:stretch!important;border-radius:12px!important;padding:5px 9px 6px!important;}
+.bubble-wrap .bubble.bq .rt{display:block!important;width:auto!important;align-self:stretch;padding:5px 5px 1px!important;}
+.bq .qc-x{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+.bq .qc-h{min-width:0;}
+/* 手感：去掉点击延迟，新消息从各自一侧弹出，不再每次整页合成 */
+button,.bubble,.tcard,.qcard,.pcard,.tile{touch-action:manipulation;}
+.me .bubble.new{transform-origin:right bottom;} .them .bubble.new{transform-origin:left bottom;}
+#sendBtn{will-change:auto!important;}
+#chat{overscroll-behavior:contain;}
 </style>
 </head>
 <body>
@@ -1520,9 +1541,11 @@ function questionCard(m){
 function setAnswer(m,a){ m.answer=a; saveHistory(); renderChat(); }
 
 function renderChat(){
-  const c=$('chat'); c.innerHTML='';
-  if(curHistory.length===0) c.innerHTML='<div class="empty">还没有消息</div>';
-  curHistory.forEach((m,i)=>{ const sp=((curRole().timeStyle||'wechat')==='wechat'&&m.type!=='sys'&&m.ts)?stampSep(m,i):null; if(sp) c.appendChild(sp); c.appendChild(bubbleRow(m,i)); }); if(typingOn) showTyping(); scrollBottom();
+  const c=$('chat'), frag=document.createDocumentFragment();
+  if(curHistory.length===0){ const e=document.createElement('div'); e.className='empty'; e.textContent='还没有消息'; frag.appendChild(e); }
+  curHistory.forEach((m,i)=>{ const sp=((curRole().timeStyle||'wechat')==='wechat'&&m.type!=='sys'&&m.ts)?stampSep(m,i):null; if(sp) frag.appendChild(sp); frag.appendChild(bubbleRow(m,i)); });
+  c.replaceChildren(frag);
+  if(typingOn) showTyping(); scrollBottom();
 }
 function scrollBottom(){ requestAnimationFrame(()=>{ $('chat').scrollTop=$('chat').scrollHeight; }); }
 function addMsg(o){
@@ -2768,38 +2791,41 @@ function syncThemeSeg(){ renderSeg('themeSeg',[['auto','跟随手机'],['light',
 try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme); }catch(e){}
 ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
 
-/* ===== iOS 视口：仅键盘打开时使用 visualViewport ===== */
+/* ===== iOS 视口：键盘只作用于聊天页，直接写内联样式、同步更新、去重 ===== */
 (function(){
-  const root=document.documentElement;
-  let raf=0;
-  const update=()=>{
-    cancelAnimationFrame(raf);
-    raf=requestAnimationFrame(()=>{
-      const vv=window.visualViewport;
-      const el=document.activeElement;
-      const isTyping=!!(el&&(/^(TEXTAREA|INPUT)$/.test(el.tagName)));
-      const layoutH=window.innerHeight||root.clientHeight;
-      const keyboard=!!(isTyping&&vv&&vv.height<layoutH-120);
-      document.body.classList.toggle('keyboard-open',keyboard);
-      if(keyboard){
-        root.style.setProperty('--app-vh',Math.round(vv.height)+'px');
-        root.style.setProperty('--vv-top',Math.max(0,Math.round(vv.offsetTop||0))+'px');
-      }else{
-        /* 非键盘状态交给 100dvh 跟随 Safari 工具栏伸缩，避免沿用旧的缩小高度 */
-        root.style.setProperty('--app-vh','100dvh');
-        root.style.setProperty('--vv-top','0px');
-      }
-    });
+  const root=document.documentElement; let last='';
+  const apply=()=>{
+    const vv=window.visualViewport, scr=document.getElementById('screen-chat'), ch=document.getElementById('chat');
+    if(!scr) return;
+    const el=document.activeElement;
+    const typing=!!(el&&/^(TEXTAREA|INPUT)$/.test(el.tagName));
+    const lh=window.innerHeight||root.clientHeight;
+    const kb=!!(typing&&vv&&vv.height<lh-120);
+    const key=kb?(Math.round(vv.height)+'|'+Math.round(vv.offsetTop)):'';
+    if(key===last) return; last=key;
+    const nearBottom=ch?(ch.scrollHeight-ch.scrollTop-ch.clientHeight<90):false;
+    document.body.classList.toggle('keyboard-open',kb);
+    const st=scr.style;
+    if(kb){
+      st.setProperty('top',Math.max(0,Math.round(vv.offsetTop))+'px','important');
+      st.setProperty('bottom','auto','important');
+      st.setProperty('height',Math.round(vv.height)+'px','important');
+      st.setProperty('max-height',Math.round(vv.height)+'px','important');
+    }else{
+      ['top','bottom','height','max-height'].forEach(p=>st.removeProperty(p));
+      if(window.scrollY) window.scrollTo(0,0);
+    }
+    if(ch&&nearBottom) requestAnimationFrame(()=>{ ch.scrollTop=ch.scrollHeight; });
   };
-  update();
-  window.addEventListener('resize',update,{passive:true});
+  apply();
+  window.addEventListener('resize',apply,{passive:true});
   if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',update,{passive:true});
-    window.visualViewport.addEventListener('scroll',update,{passive:true});
+    window.visualViewport.addEventListener('resize',apply,{passive:true});
+    window.visualViewport.addEventListener('scroll',apply,{passive:true});
   }
-  document.addEventListener('focusin',update);
-  document.addEventListener('focusout',()=>setTimeout(update,250));
-})(); 
+  document.addEventListener('focusin',apply);
+  document.addEventListener('focusout',()=>{ setTimeout(apply,60); setTimeout(apply,350); });
+})();
 /* ===== 倒数日 / 纪念日 ===== */
 function cdDays(it){ if(it.cal==='lunar') return daysToLunar(it.lm,it.ld); return it.date?widgetDays(it.date):null; }
 function renderCountdown(it,e){ const b=e.querySelector('.hw-in'), big=(it.h||1)>=2; b.className='hw-in'+(big?' cd-big':'')+(it.bg?' cd-bg':'');
