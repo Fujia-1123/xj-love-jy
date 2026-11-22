@@ -638,7 +638,7 @@ body.keyboard-open #screen-chat>footer{padding-bottom:8px;}
 /* ===== 最终修复：底栏贴底 / 引用卡与外气泡同宽 / 流畅度 ===== */
 html,body{background:var(--bg)!important;}
 /* 页面用 top/bottom:0 直接贴住视口，不再依赖 100dvh（iOS 上 dvh 会少算导致底部悬空） */
-.screen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:calc(-1 * var(--botext,0px))!important;width:100%!important;height:auto!important;min-height:var(--fullh,0px)!important;max-height:none!important;}
+.screen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:calc(-1 * var(--botext,0px))!important;width:100%!important;height:auto!important;max-height:none!important;}
 /* 底栏：安全区只留一半，输入框贴近底边，背景仍铺满到屏幕底 */
 #screen-chat>footer{padding:8px 10px max(8px,calc(env(safe-area-inset-bottom,0px) - 12px))!important;}
 body.keyboard-open #screen-chat>footer{padding-bottom:8px!important;}
@@ -655,7 +655,7 @@ button,.bubble,.tcard,.qcard,.pcard,.tile{touch-action:manipulation;}
 .me .bubble.new{transform-origin:right bottom;} .them .bubble.new{transform-origin:left bottom;}
 #sendBtn{will-change:auto!important;}
 #chat{overscroll-behavior:contain;}
-#screen-home.screen,#screen-contacts.screen,#screen-chat.screen,#screen-profile.screen,#screen-letters.screen,#screen-settings.screen,#screen-global.screen,#screen-music.screen,#screen-cardapp.screen,#screen-decor.screen{top:0!important;bottom:calc(-1 * var(--botext,0px))!important;height:auto!important;min-height:var(--fullh,0px)!important;max-height:none!important;}
+#screen-home.screen,#screen-contacts.screen,#screen-chat.screen,#screen-profile.screen,#screen-letters.screen,#screen-settings.screen,#screen-global.screen,#screen-music.screen,#screen-cardapp.screen,#screen-decor.screen{top:0!important;bottom:calc(-1 * var(--botext,0px))!important;height:auto!important;max-height:none!important;}
 *{touch-action:manipulation;}
 html,body{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;height:100%!important;overflow:hidden!important;overscroll-behavior:none!important;}
 
@@ -2857,16 +2857,24 @@ ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentCol
     }
     if(ch&&nearBottom) requestAnimationFrame(()=>{ ch.scrollTop=ch.scrollHeight; });
   };
-  const fit=()=>{
-    const sa=(navigator.standalone===true)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
-    if(!sa){ root.style.removeProperty('--fullh'); return; }
-    const land=window.innerWidth>window.innerHeight, sh=Math.max(screen.width,screen.height), sw=Math.min(screen.width,screen.height);
-    root.style.setProperty('--fullh',(land?sw:sh)+'px');
+  /* 不再强行撑高（iOS 只给 797pt 绘制区时，超出的部分会被截掉），页面高度始终跟随真实视口 */
+  const fit=()=>{ root.style.removeProperty('--fullh'); };
+  const isSA=()=>(navigator.standalone===true)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+  const short=()=>{ if(!isSA()) return false; if(window.innerWidth>window.innerHeight) return false; return window.innerHeight<Math.max(screen.width,screen.height)-8; };
+  let nudgeN=0, nudging=false;
+  /* 模拟“双击缩放再缩回”让 iOS 重新计算视口：先轻微改缩放/视口适配，再还原 */
+  const nudge=()=>{
+    if(nudging||!short()||nudgeN>=8) return; nudging=true; nudgeN++;
+    const m=document.querySelector('meta[name="viewport"]'); if(!m){ nudging=false; return; }
+    const orig=m.getAttribute('content'), v=nudgeN%2?'width=device-width, initial-scale=1.02, maximum-scale=1.02, viewport-fit=cover':'width=device-width, initial-scale=1, viewport-fit=auto';
+    m.setAttribute('content',v);
+    setTimeout(()=>{ try{ window.scrollTo(0,1); }catch(e){} m.setAttribute('content',orig); setTimeout(()=>{ try{ window.scrollTo(0,0); window.dispatchEvent(new Event('resize')); }catch(e){} apply(); nudging=false; if(short()) setTimeout(nudge,400); },120); },120);
   };
-  const nudge=()=>{ try{ const sa=(navigator.standalone===true)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches); if(!sa) return; const need=Math.max(screen.width,screen.height); if(window.innerHeight>=need-8||window.innerWidth>window.innerHeight) return;
-      const m=document.querySelector('meta[name="viewport"]'); if(!m) return; const c=m.getAttribute('content'); m.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover'); setTimeout(()=>{ m.setAttribute('content',c); fit(); apply(); },60); }catch(e){} };
-  fit(); window.addEventListener('orientationchange',()=>setTimeout(fit,300)); window.addEventListener('resize',fit,{passive:true});
-  [250,900,2000].forEach(t=>setTimeout(nudge,t)); window.addEventListener('pageshow',()=>setTimeout(nudge,200)); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(nudge,200); });
+  window.addEventListener('orientationchange',()=>{ nudgeN=0; setTimeout(nudge,500); });
+  [200,700,1500,3000].forEach(t=>setTimeout(nudge,t));
+  window.addEventListener('pageshow',()=>{ nudgeN=0; setTimeout(nudge,200); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ nudgeN=0; setTimeout(nudge,250); } });
+  document.addEventListener('touchstart',()=>{ if(short()&&nudgeN<8) nudge(); },{passive:true,once:true});
   apply();
   window.addEventListener('resize',apply,{passive:true});
   if(window.visualViewport){
