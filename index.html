@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="color-scheme" content="light dark"><meta name="theme-color" id="themeColor" content="#ffffff"><meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light dark"><meta name="theme-color" id="themeColor" content="#ffffff"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>流语</title>
 <style>
 :root{
@@ -709,6 +709,16 @@ html,html.nosb{--sbh:var(--sat,0px)!important;}
   font-family:"Snell Roundhand","Bradley Hand","Segoe Script","Kaiti SC","STKaiti","KaiTi",cursive,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:none!important;text-shadow:none!important;}
 .hw-polaroid .plx.cover .plx-ph{border-radius:2px!important;}
 .hw-polaroid .hw-in{overflow:visible!important;}
+
+/* ===== 表情包分组 / 状态栏沉浸 ===== */
+.sgroups{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;}
+.sgchip{flex:none;border:none;background:var(--input-bg);color:var(--text);padding:6px 12px;border-radius:15px;font-size:calc(var(--fs)*.93);white-space:nowrap;cursor:pointer;}
+.sgchip.on{background:#0b84ff;color:#fff;font-weight:600;}
+.sgchip.add{background:transparent;border:1px dashed rgba(128,128,128,.5);color:var(--sub);}
+html.sa #screen-home::before{content:"";position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 8px);background:linear-gradient(rgba(0,0,0,.30),rgba(0,0,0,0));z-index:5;pointer-events:none;}
+#dataModal{z-index:100001!important;}
+#backdrop2{z-index:100000!important;}
+#actionSheet{z-index:100002!important;}
 </style>
 </head>
 <body>
@@ -1043,9 +1053,10 @@ html,html.nosb{--sbh:var(--sat,0px)!important;}
 
 <div class="overlay" id="stickOverlay"><div class="sheet">
   <div class="sheet-head"><h2>表情包</h2><button id="closeStick">完成</button></div>
-  <div class="seg" id="stickTabs"><button data-t="shared" class="on">通用</button><button data-t="mine">我的</button><button data-t="used">用过的</button></div>
+  <div class="seg" id="stickTabs"><button data-t="shared" class="on">通用</button><button data-t="mine">我的</button><button data-t="role">对方专属</button></div>
+  <div id="stickGroups" class="sgroups" style="display:none;"></div>
   <div class="stick-grid" id="stickPickGrid" style="max-height:44vh;overflow:auto;"></div>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button class="btn-mini" id="stickAddBtn">＋ 添加</button><label class="sw" style="margin-left:auto;">允许对方偷用<span class="switch"><input type="checkbox" id="stealToggle"><span class="slider"></span></span></label></div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button class="btn-mini" id="stickAddBtn">＋ 添加</button><label class="sw" style="margin-left:auto;">允许对方偷用我的<span class="switch"><input type="checkbox" id="stealToggle"><span class="slider"></span></span></label></div>
   <div class="sheet-sub" id="stickHint"></div>
 </div></div>
 <div class="overlay" id="emojiOverlay"><div class="sheet">
@@ -1920,10 +1931,10 @@ $('toggleAddCard').addEventListener('click',()=>{ const f=$('addCardForm'); f.st
 $('toggleAddPat').addEventListener('click',()=>{ const f=$('addPatForm'); f.style.display=f.style.display==='none'?'flex':'none'; });
 function saveSticks(){ if(!safeSet('app_shared_stickers',sharedStickers)) toast('存储空间不足，建议改用图片链接'); }
 function saveRolesChk(){ if(!safeSet('app_roles',roles)) toast('存储空间不足，建议改用图片链接'); }
-function stickGrid(g,list,onSave,onSend){
+function stickGrid(g,list,onSave,onSend,noDel){
   g.innerHTML=''; if(!list.length){ g.innerHTML='<div class="empty" style="grid-column:1/-1;padding:14px">还没有表情包</div>'; return; }
-  list.forEach((st,i)=>{ const d=el('div','stick-item'); d.innerHTML='<img><button class="sx">✕</button>'; d.children[0].src=st.src;
-    d.children[1].addEventListener('click',ev=>{ ev.stopPropagation(); list.splice(i,1); onSave(); });
+  list.forEach((st,i)=>{ const d=el('div','stick-item'); d.innerHTML='<img>'+(noDel?'':'<button class="sx">✕</button>'); d.children[0].src=st.src;
+    if(!noDel) d.children[1].addEventListener('click',ev=>{ ev.stopPropagation(); list.splice(i,1); onSave(); });
     if(onSend) d.addEventListener('click',()=>onSend(st)); g.appendChild(d); });
 }
 function renderStickers(){ const r=curRole(); r.ownStickers=r.ownStickers||[]; $('useSharedStickToggle').checked=r.useSharedStickers!==false;
@@ -2904,7 +2915,7 @@ syncThemeColor(); try{ window.matchMedia('(prefers-color-scheme: dark)').addEven
 
 /* ===== 页面主题 / theme-color ===== */
 function applyTheme(){ const rt=document.documentElement, t=decor.theme||'auto'; if(t==='auto') rt.removeAttribute('data-theme'); else rt.setAttribute('data-theme',t);
-  setTimeout(()=>{ const m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content',getComputedStyle(document.body).backgroundColor); },30); }
+  setTimeout(()=>{ if(window.updateBarColor) window.updateBarColor(); },30); }
 function syncThemeSeg(){ renderSeg('themeSeg',[['auto','跟随手机'],['light','浅色'],['dark','深色']],decor.theme||'auto',k=>{ decor.theme=k; saveDecor(); syncThemeSeg(); }); }
 try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme); }catch(e){}
 ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
@@ -3378,46 +3389,64 @@ $('inNoticeToggle').checked=appSet.inAppNotice!==false;
 $('inNoticeToggle').addEventListener('change',e=>{ appSet.inAppNotice=!!e.target.checked; saveSet(); });
 $('fgTest').addEventListener('click',()=>flowNotify({force:true,key:'t'+Date.now(),kind:'test',title:'流语',text:'这是一条测试弹窗：点我跳转，上划或左右划可以划掉',avatar:'💬',tag:'测试',tap:()=>{}}));
 
-/* ===== 我的表情包：通用 / 我的 / 用过的；对方可以偷用“用过的” ===== */
-let userStickers=safeGet('app_user_stickers',[]), usedStickers=safeGet('app_user_used',[]), stickTab='shared';
-function saveUserSt(){ if(!safeSet('app_user_stickers',userStickers)) toast('存储空间不足，建议先压缩'); }
-function recordUsed(src){ if(!src) return; usedStickers=usedStickers.filter(x=>x!==src); usedStickers.unshift(src); if(usedStickers.length>60) usedStickers.length=60; safeSet('app_user_used',usedStickers); }
-const _stAdd=addMsg; addMsg=function(o){ const m=_stAdd(o); if(m&&m.who==='me'&&m.type==='sticker') recordUsed(m.sticker); return m; };
-stickerPoolOf=function(r){ const base=(r.ownStickers||[]).map(x=>x.src).concat(r.useSharedStickers!==false?sharedStickers.map(x=>x.src):[]); if(appSet.steal!==false&&r.steal!==false) usedStickers.forEach(x=>{ if(base.indexOf(x)<0) base.push(x); }); return base; };
+/* ===== 表情包：通用（大家都能用）/ 我的（只有我能用，可建分组并命名，对方可偷用）/ 对方专属（点一下我也能发） ===== */
+let userGroups=safeGet('app_user_sgroups',null);
+if(!Array.isArray(userGroups)){ const old=safeGet('app_user_stickers',[]); userGroups=[{id:uid(),name:'我的表情',steal:true,items:Array.isArray(old)?old:[]}]; safeSet('app_user_sgroups',userGroups); }
+let stickTab='shared', curGroup=userGroups[0]?userGroups[0].id:null;
+function saveUG(){ if(!safeSet('app_user_sgroups',userGroups)) toast('存储空间不足，建议先压缩'); }
+stickerPoolOf=function(r){ const base=(r.ownStickers||[]).map(x=>x.src).concat(r.useSharedStickers!==false?sharedStickers.map(x=>x.src):[]); if(appSet.steal!==false&&r.steal!==false) userGroups.forEach(g=>{ if(g.steal!==false) g.items.forEach(x=>{ if(base.indexOf(x.src)<0) base.push(x.src); }); }); return base; };
+function curUG(){ return userGroups.find(x=>x.id===curGroup)||null; }
+function groupNameModal(title,val,okFn){ dataModal(title,'给这组表情包起个名字',val||'',false,[['确定','confirm',()=>{ const n=$('dataText').value.trim(); if(!n){ toast('先写个名字'); return; } closeData(); okFn(n.slice(0,12)); }],['取消','cancel',closeData]]); }
+function newGroup(){ groupNameModal('新建表情包组','',n=>{ const g={id:uid(),name:n,steal:true,items:[]}; userGroups.push(g); curGroup=g.id; saveUG(); renderStickPick(); }); }
+function groupMenu(g){ showChoiceSheet([
+  {label:'重命名',onClick:()=>groupNameModal('重命名',g.name,n=>{ g.name=n; saveUG(); renderStickPick(); })},
+  {label:g.steal===false?'允许对方偷用这一组':'不让对方偷用这一组（仅自己）',onClick:()=>{ g.steal=(g.steal===false); saveUG(); renderStickPick(); toast(g.steal===false?'这一组只有你能用':'对方可以偷用这一组'); }},
+  {label:'删除这一组',danger:true,onClick:()=>showConfirm('删除「'+g.name+'」以及里面的 '+g.items.length+' 个表情包？',()=>{ userGroups=userGroups.filter(x=>x!==g); curGroup=userGroups[0]?userGroups[0].id:null; saveUG(); renderStickPick(); })}]); }
 function renderStickPick(){
-  const g=$('stickPickGrid'); document.querySelectorAll('#stickTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===stickTab));
+  const g=$('stickPickGrid'), gs=$('stickGroups'), hint=$('stickHint'); document.querySelectorAll('#stickTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===stickTab));
   const send=st=>{ addMsg({who:'me',type:'sticker',text:'[表情包]',sticker:st.src}); markPending(true); $('stickOverlay').classList.remove('open'); };
-  if(stickTab==='shared') stickGrid(g,sharedStickers,()=>{ saveSticks(); renderStickPick(); },send);
-  else if(stickTab==='mine') stickGrid(g,userStickers,()=>{ saveUserSt(); renderStickPick(); },send);
-  else { const used=usedStickers.map(src=>({src})); stickGrid(g,used,()=>{ usedStickers=used.map(x=>x.src); safeSet('app_user_used',usedStickers); renderStickPick(); },send); }
-  $('stickAddBtn').style.display=stickTab==='used'?'none':''; $('stickAddBtn').textContent=stickTab==='shared'?'＋ 添加到通用':'＋ 添加到我的';
-  $('stickHint').textContent=stickTab==='shared'?'通用表情包：所有角色都能用，点一下发送，右上角 ✕ 删除。':stickTab==='mine'?'我的表情包：只属于你，点一下发送。':'你发过的表情包会记在这里，打开“允许对方偷用”后，对方回复时也会拿去用；删掉就偷不到了。';
+  gs.style.display=stickTab==='mine'?'flex':'none'; let addLabel='', canAdd=true;
+  if(stickTab==='shared'){ stickGrid(g,sharedStickers,()=>{ saveSticks(); renderStickPick(); },send); addLabel='＋ 添加到通用'; hint.textContent='通用表情包：我和所有角色都能用（就是“存箧”里的通用表情包），点一下发送。'; }
+  else if(stickTab==='mine'){
+    if(!curUG()) curGroup=userGroups[0]?userGroups[0].id:null;
+    gs.innerHTML=''; userGroups.forEach(x=>{ const b=el('button','sgchip'+(x.id===curGroup?' on':'')); b.textContent=x.name+(x.steal===false?' 🔒':''); b.addEventListener('click',()=>{ curGroup=x.id; renderStickPick(); }); gs.appendChild(b); });
+    const nb=el('button','sgchip add'); nb.textContent='＋ 新建组'; nb.addEventListener('click',newGroup); gs.appendChild(nb);
+    const cg=curUG();
+    if(cg){ const mb=el('button','sgchip add'); mb.textContent='⋯ 管理本组'; mb.addEventListener('click',()=>groupMenu(cg)); gs.appendChild(mb); stickGrid(g,cg.items,()=>{ saveUG(); renderStickPick(); },send); addLabel='＋ 添加到「'+cg.name+'」'; }
+    else { g.innerHTML='<div class="empty" style="grid-column:1/-1;padding:14px">先点“＋ 新建组”，起个名字再添加表情包</div>'; canAdd=false; }
+    hint.textContent='我的表情包：只有我能发。打开下面的“允许对方偷用”后，对方回复时会偷偷拿去用；带 🔒 的组不会被偷。';
+  } else { const r=curRole(); r.ownStickers=r.ownStickers||[]; stickGrid(g,r.ownStickers,null,send,true); canAdd=false; hint.textContent='这是 '+(r.name||'对方')+' 自己的专属表情包，我也可以点一下发出去。要添加或删除，请到角色设置里改。'; }
+  $('stickAddBtn').style.display=canAdd?'':'none'; $('stickAddBtn').textContent=addLabel;
 }
 $('stickBtn').addEventListener('click',()=>{ $('plusPanel').classList.remove('open'); $('menuBtn').classList.remove('on'); $('stealToggle').checked=appSet.steal!==false; renderStickPick(); $('stickOverlay').classList.add('open'); });
 $('closeStick').addEventListener('click',()=>$('stickOverlay').classList.remove('open'));
 $('stickOverlay').addEventListener('click',e=>{ if(e.target===$('stickOverlay')) $('stickOverlay').classList.remove('open'); });
-document.querySelectorAll('#stickTabs button').forEach(b=>b.addEventListener('click',()=>{ stickTab=b.dataset.t; renderStickPick(); }));
-$('stickAddBtn').addEventListener('click',()=>pickImages(urls=>{ const list=stickTab==='shared'?sharedStickers:userStickers; dupToast(addUnique(list,urls.map(url=>({id:uid(),src:url})),c=>c.src)); if(stickTab==='shared') saveSticks(); else saveUserSt(); renderStickPick(); }));
+document.querySelectorAll('#stickTabs button').forEach(b=>b.addEventListener('click',()=>{ stickTab=b.dataset.t==='role'?'role':b.dataset.t; renderStickPick(); }));
+$('stickAddBtn').addEventListener('click',()=>pickImages(urls=>{ const mk=urls.map(url=>({id:uid(),src:url}));
+  if(stickTab==='shared'){ dupToast(addUnique(sharedStickers,mk,c=>c.src)); saveSticks(); } else { const cg=curUG(); if(!cg) return; dupToast(addUnique(cg.items,mk,c=>c.src)); saveUG(); } renderStickPick(); }));
 $('stealToggle').addEventListener('change',e=>{ appSet.steal=!!e.target.checked; saveSet(); });
 
-/* ===== 唱片封面（每张唱片独立，点唱片更换）/ 每日一句点击编辑 ===== */
-syncVinyls=function(){ try{ homeLayout.forEach(it=>{ if(it.type!=='vinyl') return; const e=itemEl(it), l=e&&e.querySelector('.vinyl-label'); if(!l) return; const src=it.img||decor.vinylImage||''; l.innerHTML=src?'<img src="'+src.replace(/"/g,'&quot;')+'">':ICON.music; }); }catch(e){} };
-const _wtV=widgetTap;
-widgetTap=function(it){ if(editMode) return;
-  if(it.type==='vinyl'){ showChoiceSheet([{label:'更换封面',onClick:()=>pickImage(async u=>{ it.img=await compressImg(u,640,.85); saveHome(); renderHome(); })},{label:'恢复默认封面',onClick:()=>{ delete it.img; saveHome(); renderHome(); }}]); return; }
-  if(it.type==='quote'){ showChoiceSheet([{label:'编辑这句话',onClick:()=>dataModal('每日一句','',it.cur||'',false,[['保存','confirm',()=>{ it.cur=$('dataText').value.trim(); if(!it.cur) delete it.cur; saveHome(); closeData(); renderHome(); }],['取消','cancel',closeData]])},{label:'随机换一句',onClick:()=>_wtV(it)},{label:'恢复每日一句',onClick:()=>{ delete it.cur; saveHome(); renderHome(); }}]); return; }
-  _wtV(it); };
-(function(){ const t=[...document.querySelectorAll('#screen-decor .sec-title')].find(x=>x.textContent.trim()==='唱片封面'); if(t){ t.textContent='唱片颜色'; let n=t.nextElementSibling; while(n&&!n.classList.contains('sec-title')){ if(n.querySelector&&n.querySelector('#vinylBtn')) n.style.display='none'; n=n.nextElementSibling; } } })();
-try{ renderHome(); }catch(e){}
+/* ===== 状态栏：让手机自带的状态栏“映”在页面上，而不是自带一块底色 =====
+   · 从主屏幕图标打开（沉浸模式）：状态栏完全透明，壁纸/页面直接铺到屏幕最顶，顶部加一层极淡的渐变保证白字可读；
+   · 在浏览器里打开：状态栏的底色会自动取“当前页面顶部那一条”的颜色（有壁纸就取壁纸顶部的平均色），看起来就是连在一起的。 */
+(function(){ const sa=(navigator.standalone===true)||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches); document.documentElement.classList.toggle('sa',!!sa); })();
+const _barCache={};
+function imgTopColor(src){ return new Promise(res=>{ if(_barCache[src]) return res(_barCache[src]); const im=new Image();
+  im.onload=()=>{ try{ const iw=im.naturalWidth, ih=im.naturalHeight; if(!iw||!ih) return res(null); const R=(window.innerHeight||844)/(window.innerWidth||390); const vis=Math.min(ih,iw*R), sy=Math.max(0,(ih-vis)/2), sh=Math.max(1,Math.round(vis*.06));
+      const c=document.createElement('canvas'); c.width=24; c.height=4; const x=c.getContext('2d'); x.drawImage(im,0,sy,iw,sh,0,0,24,4); const d=x.getImageData(0,0,24,4).data; let r=0,g=0,b=0,n=0; for(let i=0;i<d.length;i+=4){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; n++; }
+      const col='rgb('+Math.round(r/n)+','+Math.round(g/n)+','+Math.round(b/n)+')'; _barCache[src]=col; res(col); }catch(e){ res(null); } };
+  im.onerror=()=>res(null); im.src=src; }); }
+async function updateBarColor(){ try{
+  const act=document.querySelector('.screen.active'); if(!act) return; let col=null;
+  if(act.id==='screen-home'&&decor.wallpaper) col=await imgTopColor(decor.wallpaper);
+  if(!col){ const h=act.querySelector('header'); if(h){ const c=getComputedStyle(h).backgroundColor, m=c.match(/rgba?\(([^)]+)\)/); if(m){ const p=m[1].split(',').map(Number); if(p.length<4||p[3]>.85) col=c; } } }
+  if(!col) col=getComputedStyle(document.body).backgroundColor;
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute('content',col)); }catch(e){} }
+window.updateBarColor=updateBarColor;
+const _showBar=show; show=function(id){ _showBar(id); setTimeout(updateBarColor,40); };
+setTimeout(updateBarColor,200);
+const _applyDecorBar=applyDecor; applyDecor=function(){ const r=_applyDecorBar.apply(this,arguments); setTimeout(updateBarColor,60); return r; };
 
-/* ===== 发送键：状态切换不再“闪一帧”（回复中保持绿色淡出，不换图标不换底色） ===== */
-refreshSend=function(){
-  const has=$('msgInput').value.trim().length>0, go=!has&&canTrigger(), busy=!has&&!go&&replying, b=$('sendBtn');
-  b.classList.toggle('active',has||go||busy); b.classList.toggle('go',go||busy); b.classList.toggle('busy',busy);
-  const t=(go||busy)?'➤':'↑'; if(b.textContent!==t) b.textContent=t;
-  $('msgInput').placeholder=(go&&pending)?'继续输入，或再点一次发送让对方回复':'发消息…';
-};
-refreshSend();
 /* ===== 压缩：上传自动压缩 + 一键压缩已有图片 + 占用统计 ===== */
 function CMP(){ return Object.assign({on:true,max:1280,q:80},appSet.cmp||{}); }
 function cmpImage(src,opt){
