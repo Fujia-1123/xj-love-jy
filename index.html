@@ -638,7 +638,7 @@ body.keyboard-open #screen-chat>footer{padding-bottom:8px;}
 /* ===== 最终修复：底栏贴底 / 引用卡与外气泡同宽 / 流畅度 ===== */
 html,body{background:var(--bg)!important;}
 /* 页面用 top/bottom:0 直接贴住视口，不再依赖 100dvh（iOS 上 dvh 会少算导致底部悬空） */
-.screen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;height:auto!important;max-height:none!important;}
+.screen{position:fixed!important;top:0!important;left:0!important;right:auto!important;bottom:auto!important;width:100vw!important;height:var(--appH,100vh)!important;min-height:0!important;max-height:none!important;}
 /* 底栏：安全区只留一半，输入框贴近底边，背景仍铺满到屏幕底 */
 #screen-chat>footer{padding:8px 10px max(8px,calc(env(safe-area-inset-bottom,0px) - 12px))!important;}
 body.keyboard-open #screen-chat>footer{padding-bottom:8px!important;}
@@ -655,7 +655,7 @@ button,.bubble,.tcard,.qcard,.pcard,.tile{touch-action:manipulation;}
 .me .bubble.new{transform-origin:right bottom;} .them .bubble.new{transform-origin:left bottom;}
 #sendBtn{will-change:auto!important;}
 #chat{overscroll-behavior:contain;}
-#screen-home.screen,#screen-contacts.screen,#screen-chat.screen,#screen-profile.screen,#screen-letters.screen,#screen-settings.screen,#screen-global.screen,#screen-music.screen,#screen-cardapp.screen,#screen-decor.screen{top:0!important;bottom:0!important;height:auto!important;max-height:none!important;}
+#screen-home.screen,#screen-contacts.screen,#screen-chat.screen,#screen-profile.screen,#screen-letters.screen,#screen-settings.screen,#screen-global.screen,#screen-music.screen,#screen-cardapp.screen,#screen-decor.screen{position:fixed!important;top:0!important;left:0!important;right:auto!important;bottom:auto!important;width:100vw!important;height:var(--appH,100vh)!important;min-height:0!important;max-height:none!important;}
 button,a,input,select,textarea,.bubble,.tile,.app-tile{touch-action:manipulation;}
 html,body{position:static!important;width:100%!important;height:100%!important;margin:0!important;overflow:hidden!important;}
 
@@ -698,8 +698,8 @@ html,html.nosb{--sbh:var(--sat,0px)!important;}
   background:#fff!important;background-image:none!important;border:none!important;border-radius:4px!important;
   transform:rotate(-2.6deg)!important;filter:none!important;display:flex;flex-direction:column;gap:0!important;overflow:visible!important;
   box-shadow:0 1px 2px rgba(20,20,30,.10),0 8px 20px rgba(20,20,30,.16),0 22px 40px -12px rgba(20,20,30,.22)!important;}
-.hw-polaroid .plx::before{content:"";position:absolute;top:-9px;left:50%;width:46%;height:18px;transform:translateX(-50%) rotate(2deg);border-radius:2px;
-  background:repeating-linear-gradient(135deg,rgba(255,255,255,.55) 0 5px,rgba(255,214,224,.55) 5px 10px);box-shadow:0 1px 3px rgba(0,0,0,.12);backdrop-filter:blur(1px);}
+.hw-polaroid .plx::before{content:"";position:absolute;top:-13px;right:16%;width:15px;height:38px;transform:rotate(7deg);pointer-events:none;z-index:2;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 38' fill='none' stroke='%23b9bec9' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M4 28V8.5a3.5 3.5 0 0 1 7 0V30a5.5 5.5 0 0 1-11 0V12'/></svg>") center/contain no-repeat;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
 .hw-polaroid .plx-ph{position:relative;flex:1;min-height:0;border:none!important;outline:none!important;border-radius:2px!important;
   background-color:#eceef2;background-size:cover!important;background-position:center;
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),inset 0 0 14px rgba(0,0,0,.10)!important;filter:saturate(1.06) contrast(1.03);color:#a5a8b2;
@@ -2909,17 +2909,18 @@ function syncThemeSeg(){ renderSeg('themeSeg',[['auto','跟随手机'],['light',
 try{ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme); }catch(e){}
 ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
 
-/* ===== iOS 视口：键盘只作用于聊天页，直接写内联样式、同步更新、去重 ===== */
+/* ===== 视口：页面按 100vw × 100vh 铺满（与参考文件一致）；键盘弹起时聊天页收缩到可视区，输入框始终在键盘上方 ===== */
 (function(){
   const root=document.documentElement; let last='';
+  const probe=document.createElement('div'); probe.style.cssText='position:fixed;left:0;top:0;width:1px;height:100vh;visibility:hidden;pointer-events:none;'; document.body.appendChild(probe);
   const apply=()=>{
     const vv=window.visualViewport, scr=document.getElementById('screen-chat'), ch=document.getElementById('chat');
     if(!scr) return;
-    const el=document.activeElement;
-    const typing=!!(el&&/^(TEXTAREA|INPUT)$/.test(el.tagName));
-    const lh=window.innerHeight||root.clientHeight;
-    const kb=!!(typing&&vv&&vv.height<lh-120);
-    const key=kb?(Math.round(vv.height)+'|'+Math.round(vv.offsetTop)):'';
+    const vh=probe.offsetHeight||window.innerHeight, ih=window.innerHeight||vh, lh=Math.max(ih,root.clientHeight);
+    /* 浏览器工具栏遮住了底部（可视高度比 100vh 矮）时，贴合可视区，否则按 100vh */
+    if(ih<vh-2) root.style.setProperty('--appH',ih+'px'); else root.style.removeProperty('--appH');
+    const kb=!!(vv&&lh-vv.height>80);
+    const key=(kb?Math.round(vv.height)+'|'+Math.round(vv.offsetTop):'')+'|'+ih+'|'+vh;
     if(key===last) return; last=key;
     const nearBottom=ch?(ch.scrollHeight-ch.scrollTop-ch.clientHeight<90):false;
     document.body.classList.toggle('keyboard-open',kb);
@@ -2928,21 +2929,27 @@ ICON.sliders='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentCol
       st.setProperty('top',Math.max(0,Math.round(vv.offsetTop))+'px','important');
       st.setProperty('bottom','auto','important');
       st.setProperty('height',Math.round(vv.height)+'px','important');
-      st.setProperty('max-height',Math.round(vv.height)+'px','important'); st.setProperty('min-height','0px','important');
+      st.setProperty('max-height',Math.round(vv.height)+'px','important');
     }else{
-      ['top','bottom','height','max-height','min-height'].forEach(p=>st.removeProperty(p));
+      ['top','bottom','height','max-height'].forEach(p=>st.removeProperty(p));
     }
     if(ch&&nearBottom) requestAnimationFrame(()=>{ ch.scrollTop=ch.scrollHeight; });
   };
+  /* iOS 的键盘动画期间 visualViewport 事件时有时无，聚焦/失焦后逐帧同步一小段时间，保证每次都能顶起来 */
+  let loopUntil=0, looping=false;
+  const loop=ms=>{ loopUntil=Math.max(loopUntil,performance.now()+ms); if(looping) return; looping=true; const tick=()=>{ apply(); if(performance.now()<loopUntil) requestAnimationFrame(tick); else looping=false; }; requestAnimationFrame(tick); };
   apply();
-  window.addEventListener('resize',apply,{passive:true});
+  window.addEventListener('resize',()=>loop(500),{passive:true});
+  window.addEventListener('orientationchange',()=>loop(800));
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize',apply,{passive:true});
     window.visualViewport.addEventListener('scroll',apply,{passive:true});
   }
-  document.addEventListener('focusin',apply);
-  document.addEventListener('focusout',()=>{ setTimeout(apply,60); setTimeout(apply,350); });
+  document.addEventListener('focusin',e=>{ if(e.target&&/^(TEXTAREA|INPUT)$/.test(e.target.tagName)) loop(1200); });
+  document.addEventListener('focusout',()=>loop(900));
+  setInterval(apply,1500);
 })();
+
 /* ===== 倒数日 / 纪念日 ===== */
 function cdDays(it){ if(it.cal==='lunar') return daysToLunar(it.lm,it.ld); return it.date?widgetDays(it.date):null; }
 function renderCountdown(it,e){ const b=e.querySelector('.hw-in'), big=(it.h||1)>=2; b.className='hw-in'+(big?' cd-big':'')+(it.bg?' cd-bg':'');
