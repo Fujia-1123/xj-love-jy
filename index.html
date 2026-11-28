@@ -751,6 +751,32 @@ html,html.nosb{--sbh:var(--sat,0px)!important;}
 .sg-btn{border:none;background:var(--input-bg);color:var(--text);padding:6px 13px;border-radius:14px;font-size:calc(var(--fs)*.93);cursor:pointer;}
 .sg-btn.danger{background:rgba(255,69,58,.18);color:#ff453a;}
 .sg-btn:disabled{opacity:.4;}
+
+/* ===== 提问卡片：百搭简洁风（跟随深浅色主题） ===== */
+.qcard{width:252px!important;max-width:100%;background:var(--input-bg)!important;color:var(--text)!important;border-radius:20px!important;padding:14px 14px 12px!important;margin:6px 0 3px!important;
+  border:1px solid var(--divider);box-shadow:0 10px 28px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.06)!important;}
+.qcard:before{display:none!important;}
+.qcard .qh{display:flex;align-items:center;gap:7px;font-size:calc(var(--fs)*.8);color:var(--sub);opacity:1;margin-bottom:8px;}
+.qcard .qi{display:inline-flex;width:20px;height:20px;border-radius:7px;align-items:center;justify-content:center;background:rgba(11,132,255,.16);color:#0b84ff;flex:none;}
+.qcard .qn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.qcard .qk{font-style:normal;font-size:calc(var(--fs)*.72);padding:2px 8px;border-radius:9px;background:rgba(128,128,128,.18);color:var(--sub);letter-spacing:.5px;}
+.qcard .qt{font-size:calc(var(--fs)*1.08);font-weight:650;line-height:1.42;margin:0 0 10px;color:var(--text);}
+.qcard .qos{display:flex;flex-direction:column;gap:7px;}
+.qcard .qo{display:flex;align-items:center;gap:10px;margin:0!important;padding:9px 11px!important;border-radius:14px!important;background:rgba(128,128,128,.13)!important;border:1.5px solid transparent;font-size:calc(var(--fs)*.964);color:var(--text);transition:background .15s,border-color .15s,transform .1s;}
+.qcard .qo.tap{cursor:pointer;} .qcard .qo.tap:active{transform:scale(.98);}
+.qcard .qo .lt{width:24px;height:24px;border-radius:8px!important;background:rgba(128,128,128,.24)!important;color:var(--text);font-size:calc(var(--fs)*.8);font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;transition:background .15s;}
+.qcard .qo .ot{flex:1;min-width:0;line-height:1.35;word-break:break-word;}
+.qcard .qo.pick,.qcard .qo.on{background:rgba(11,132,255,.15)!important;border-color:#0b84ff;}
+.qcard .qo.pick .lt,.qcard .qo.on .lt{background:#0b84ff!important;color:#fff;}
+.qcard.multi .qo .lt{border-radius:50%!important;}
+.qcard .qsub{width:100%;margin-top:10px;padding:10px;border:none;border-radius:14px;background:#0b84ff;color:#fff;font-size:calc(var(--fs)*.964);font-weight:600;cursor:pointer;transition:opacity .15s;}
+.qcard .qsub:disabled{opacity:.35;}
+.qcard .qf{margin-top:10px;padding-top:9px;border-top:1px solid var(--divider);font-size:calc(var(--fs)*.82);color:var(--sub);}
+.qcard.done .qf{color:var(--text);}
+.q-opt-row{display:flex;align-items:center;gap:10px;margin:10px 0 2px;}
+.q-cap{width:64px;flex-shrink:0;font-size:calc(var(--fs)*.93);color:var(--sub);}
+.q-opt-row .seg{flex:1;}
+.chat-more{display:block;margin:6px auto 10px;border:none;background:var(--input-bg);color:var(--sub);padding:7px 16px;border-radius:15px;font-size:calc(var(--fs)*.9);cursor:pointer;}
 </style>
 </head>
 <body>
@@ -866,7 +892,7 @@ html,html.nosb{--sbh:var(--sat,0px)!important;}
       <div class="field-row"><label>画质</label><input type="range" id="cmpQ" min="50" max="95" step="5" value="80" style="flex:1;"><span id="cmpQv" style="width:46px;text-align:right;color:var(--sub);">80%</span></div>
       <div class="sheet-sub">新上传的头像、壁纸、表情包、图片消息会先缩小再保存，肉眼几乎看不出区别，但能省一大半空间。带透明背景的 PNG 会保持透明，GIF 不会被处理。画质越低越省。</div>
       <div class="field-row"><label style="width:auto;flex:1;"><b>自动压缩文字数据（无损）</b></label><label class="switch"><input type="checkbox" id="lzOnToggle"><span class="slider"></span></label></div>
-      <div class="sheet-sub">聊天记录、朋友圈、信件这类文字会在后台悄悄压缩存放，读取时自动还原，内容完全不变，通常能缩到原来的 1/5 以下。</div>
+      <div class="sheet-sub">所有保存的数据（聊天记录、朋友圈、信件、设置，以及图片、字体、壁纸里的内容）都会在空闲时悄悄无损压缩存放，读取时自动还原，内容完全不变：文字通常能缩到原来的 1/5 以下，图片和字体也能省近一半。</div>
       <div style="display:flex;gap:8px;margin:6px 0;"><button class="btn-mini" id="cmpRun">压缩已有图片</button><button class="btn-mini" id="lzRunBtn">压缩文字数据</button><button class="btn-mini" id="stoBtn">查看占用</button></div>
       <div class="sheet-sub" id="stoInfo" style="white-space:pre-line;margin-bottom:12px;">点“查看占用”可以看到每一类数据各占多少。</div></details>
     <details class="acc"><summary>备份与恢复</summary>
@@ -1419,9 +1445,10 @@ let lzOn=true; const lzQ=new Set(), lzSkip={}; let lzT=0;
 function rawGet(k){ const v=localStorage.getItem(k); return (v&&v.indexOf('LZ1:')===0)?lzD(v.slice(4)):v; }
 function lzTry(k,minLen,ratio){ const r=localStorage.getItem(k); if(!r||r.length<minLen||r.indexOf('LZ1:')===0) return 0; const c=lzC(r); if(c.length+4>=r.length*ratio) return -1; if(lzD(c)!==r) return -1; localStorage.setItem(k,'LZ1:'+c); return r.length-c.length-4; }
 function lzSchedule(k){ if(!lzOn) return; lzQ.add(k); clearTimeout(lzT); lzT=setTimeout(lzRun,3500); }
-function lzRun(){ let did=false;
+function lzRun(){ if(typeof requestIdleCallback==='function'&&!lzRun._idle){ lzRun._idle=true; requestIdleCallback(()=>{ lzRun._idle=false; lzRun2(); },{timeout:6000}); return; } lzRun2(); }
+function lzRun2(){ let did=false;
   while(!did&&lzQ.size){ const k=lzQ.values().next().value; lzQ.delete(k);
-    try{ const r=localStorage.getItem(k); if(r&&r.length>=16000&&r.length<=700000&&(!lzSkip[k]||r.length>lzSkip[k]*1.3)){ did=true; if(lzTry(k,16000,.8)===-1) lzSkip[k]=r.length; } }catch(e){} }
+    try{ const r=localStorage.getItem(k); if(r&&r.length>=16000&&r.length<=3000000&&(!lzSkip[k]||r.length>lzSkip[k]*1.3)){ did=true; if(lzTry(k,16000,.8)===-1) lzSkip[k]=r.length; } }catch(e){} }
   if(lzQ.size) setTimeout(lzRun,500); }
 function safeGet(k,f){ try{ let r=localStorage.getItem(k); if(!r) return f; if(r.indexOf('LZ1:')===0){ r=lzD(r.slice(4)); if(r==null) return f; } return JSON.parse(r); }catch(e){ return f; } }
 function safeSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){ return false; } try{ if(k.indexOf('app_')===0) lzSchedule(k); }catch(e){} return true; }
@@ -1692,33 +1719,49 @@ function transferCard(m){
   });
   return c;
 }
+const qSel={};
+function qLab(q,i){ return q.label==='num'?String(i+1):String.fromCharCode(65+i); }
 function questionCard(m){
-  const q=m.question, ans=m.answer, answerer=m.who==='me'?'them':'me', L=i=>String.fromCharCode(65+i);
-  const canAns=!ans&&m.who==='them';
-  const c=el('div','qcard');
-  const h=el('div','qh'); h.textContent=nm(m.who,m.by)+' 的提问'; c.appendChild(h);
+  const q=m.question, ans=m.answer, answerer=m.who==='me'?'them':'me';
+  const canAns=!ans&&m.who==='them', who=nm(answerer,m.answerBy||m.by);
+  const c=el('div','qcard'+(q.multi?' multi':'')+(ans?' done':''));
+  const h=el('div','qh'); h.innerHTML='<i class="qi"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.2 1-1.2 1.8"/><path d="M12 16.8h.01"/></svg></i><span class="qn"></span><em class="qk"></em>';
+  h.querySelector('.qn').textContent=nm(m.who,m.by)+' 的提问'; h.querySelector('.qk').textContent=q.kind==='choice'?(q.multi?'多选':'单选'):'问答'; c.appendChild(h);
   const t=el('div','qt'); t.textContent=q.text; c.appendChild(t);
-  if(q.kind==='choice') q.options.forEach((o,i)=>{
-    const d=el('div','qo'+(ans&&ans.idx===i?' pick':'')+(canAns?' tap':''));
-    d.innerHTML='<span class="lt"></span><span></span>'; d.children[0].textContent=L(i); d.children[1].textContent=o;
-    if(canAns) d.addEventListener('click',()=>{ if(lpFired){lpFired=false;return;} setAnswer(m,{idx:i,text:o}); });
-    c.appendChild(d);
-  });
+  const picked=new Set(ans?(ans.idxs||(ans.idx!=null?[ans.idx]:[])):[]), sel=qSel[m.id]||(qSel[m.id]=new Set()); let sub=null;
+  const refresh=()=>{ if(sub){ sub.disabled=!sel.size; sub.textContent=sel.size?'提交（已选 '+sel.size+'）':'请选择答案'; } };
+  if(q.kind==='choice'){
+    const box=el('div','qos');
+    q.options.forEach((o,i)=>{
+      const d=el('div','qo'+(picked.has(i)?' pick':'')+(canAns?' tap':'')); d.innerHTML='<span class="lt"></span><span class="ot"></span>'; d.children[0].textContent=qLab(q,i); d.children[1].textContent=o;
+      if(canAns) d.addEventListener('click',()=>{ if(lpFired){lpFired=false;return;}
+        if(q.multi){ if(sel.has(i)) sel.delete(i); else sel.add(i); d.classList.toggle('on',sel.has(i)); refresh(); }
+        else setAnswer(m,{idx:i,text:o}); });
+      if(canAns&&q.multi&&sel.has(i)) d.classList.add('on');
+      box.appendChild(d); });
+    c.appendChild(box);
+    if(canAns&&q.multi){ sub=el('button','qsub'); sub.addEventListener('click',ev=>{ ev.stopPropagation(); if(!sel.size) return; const idxs=Array.from(sel).sort((x,y)=>x-y), texts=idxs.map(i=>q.options[i]); delete qSel[m.id]; setAnswer(m,{idxs,texts,idx:idxs[0],text:texts.join('、')}); }); c.appendChild(sub); refresh(); }
+  }
   const f=el('div','qf');
-  if(ans) f.textContent = q.kind==='choice' ? nm(answerer,m.answerBy||m.by)+' 选择了 '+L(ans.idx) : nm(answerer,m.answerBy||m.by)+'：'+ans.text;
-  else f.textContent = canAns ? (q.kind==='choice'?'请选择一个答案':'点击作答') : (q.kind==='choice' ? '等待 '+nm(answerer,m.answerBy||m.by)+' 选择…' : '等待 '+nm(answerer,m.answerBy||m.by)+' 回答…');
+  if(ans) f.textContent = q.kind==='choice' ? who+' 选择了 '+Array.from(picked).sort((x,y)=>x-y).map(i=>qLab(q,i)).join('、') : who+'：'+ans.text;
+  else f.textContent = canAns ? (q.kind==='choice'?(q.multi?'可以选择多个答案':'请选择一个答案'):'点击作答') : '等待 '+who+(q.kind==='choice'?' 选择…':' 回答…');
   c.appendChild(f);
   if(canAns && q.kind==='free') c.addEventListener('click',()=>{ if(lpFired){lpFired=false;return;} showLinkModal('回答：'+q.text, v=>setAnswer(m,{text:v}), '输入回答内容'); });
   return c;
 }
+function autoChoice(q){ const n=q.options.length; if(q.multi&&n>1){ const k=1+Math.floor(Math.random()*Math.min(n-1,3)), pool=q.options.map((_,i)=>i), idxs=[]; while(idxs.length<k&&pool.length) idxs.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]); idxs.sort((x,y)=>x-y); const texts=idxs.map(i=>q.options[i]); return {idxs,texts,idx:idxs[0],text:texts.join('、')}; } const i=Math.floor(Math.random()*n); return {idx:i,text:q.options[i]}; }
 function setAnswer(m,a){ m.answer=a; saveHistory(); renderChat(); }
 
-function renderChat(){
-  const c=$('chat'), frag=document.createDocumentFragment();
+let chatLimit=60;
+function renderChat(keep){
+  const c=$('chat'), frag=document.createDocumentFragment(), oldH=c.scrollHeight, oldT=c.scrollTop;
   if(curHistory.length===0){ const e=document.createElement('div'); e.className='empty'; e.textContent='还没有消息'; frag.appendChild(e); }
-  curHistory.forEach((m,i)=>{ const sp=((curRole().timeStyle||'wechat')==='wechat'&&m.type!=='sys'&&m.ts)?stampSep(m,i):null; if(sp) frag.appendChild(sp); frag.appendChild(bubbleRow(m,i)); });
+  const start=Math.max(0,curHistory.length-chatLimit);
+  if(start>0){ const mb=document.createElement('button'); mb.className='chat-more'; mb.textContent='查看更早的消息（还有 '+start+' 条）'; mb.addEventListener('click',()=>{ chatLimit+=80; renderChat(true); }); frag.appendChild(mb); }
+  for(let i=start;i<curHistory.length;i++){ const m=curHistory[i]; const sp=((curRole().timeStyle||'wechat')==='wechat'&&m.type!=='sys'&&m.ts)?stampSep(m,i):null; if(sp) frag.appendChild(sp); frag.appendChild(bubbleRow(m,i)); }
   c.replaceChildren(frag);
-  if(typingOn) showTyping(); scrollBottom();
+  if(typingOn) showTyping();
+  if(keep===true) c.scrollTop=c.scrollHeight-oldH+oldT; else scrollBottom();
 }
 function scrollBottom(){ requestAnimationFrame(()=>{ $('chat').scrollTop=$('chat').scrollHeight; }); }
 function addMsg(o){
@@ -1812,7 +1855,7 @@ function triggerReply(){
     items.forEach(m=>{
       if(r.isGroup&&groupMembers(r).length) m.answerBy=randMember(r).id;
       if(m.type==='transfer') m.transfer.status=Math.random()<.8?'accepted':'returned';
-      else if(m.question.kind==='choice'){ const i=Math.floor(Math.random()*m.question.options.length); m.answer={idx:i,text:m.question.options[i]}; }
+      else if(m.question.kind==='choice'){ m.answer=autoChoice(m.question); }
       else m.answer={text:pickCards(1)[0]||'嗯'};
     });
     if(items.length){ saveHistory(); renderChat(); }
@@ -1877,28 +1920,34 @@ $('doTransferBtn').addEventListener('click', ()=>{
 });
 
 let qKind='choice', qText='', qOpts=['',''];
+let qMulti=false, qLabel='abc';
 function renderQ(){
   renderSeg('qKind',[['choice','选择 / 判断题'],['free','问答题']],qKind,k=>{ qKind=k; renderQ(); });
   const f=$('questionForm'); f.innerHTML='';
   const t=el('div','field-row'); t.innerHTML='<label>问题</label><input type="text" placeholder="如：你爱不爱我">'; const ti=t.querySelector('input'); ti.value=qText; ti.addEventListener('input',()=>{ qText=ti.value; }); f.appendChild(t);
   if(qKind!=='choice') return;
+  const r1=el('div','q-opt-row'); r1.innerHTML='<div class="q-cap">答题方式</div><div class="seg" id="qMultiSeg"></div>'; f.appendChild(r1);
+  renderSeg('qMultiSeg',[['single','单选'],['multi','多选']],qMulti?'multi':'single',k=>{ qMulti=k==='multi'; renderQ(); });
+  const r2=el('div','q-opt-row'); r2.innerHTML='<div class="q-cap">序号样式</div><div class="seg" id="qLabelSeg"></div>'; f.appendChild(r2);
+  renderSeg('qLabelSeg',[['abc','A  B  C'],['num','1  2  3']],qLabel,k=>{ qLabel=k; appSet.qLabel=k; saveSet(); renderQ(); });
+  const lab=i=>qLabel==='num'?String(i+1):String.fromCharCode(65+i);
   qOpts.forEach((o,i)=>{
     const row=el('div','opt-row'); row.innerHTML='<span class="lt"></span><input type="text"><button class="x">✕</button>';
-    row.children[0].textContent=String.fromCharCode(65+i);
-    const inp=row.children[1]; inp.placeholder='选项 '+String.fromCharCode(65+i); inp.value=o; inp.addEventListener('input',()=>{ qOpts[i]=inp.value; });
+    row.children[0].textContent=lab(i);
+    const inp=row.children[1]; inp.placeholder='选项 '+lab(i); inp.value=o; inp.addEventListener('input',()=>{ qOpts[i]=inp.value; });
     const x=row.children[2]; if(qOpts.length<=2) x.style.visibility='hidden'; x.addEventListener('click',()=>{ qOpts.splice(i,1); renderQ(); });
     f.appendChild(row);
   });
   const add=el('button','btn-mini'); add.textContent='＋ 添加选项'; add.style.marginTop='10px'; add.style.alignSelf='flex-start';
   add.addEventListener('click',()=>{ if(qOpts.length<10){ qOpts.push(''); renderQ(); } }); f.appendChild(add);
 }
-$('questionBtn').addEventListener('click', ()=>{ asWho='me'; qKind='choice'; qText=''; qOpts=['','']; renderQ(); $('questionOverlay').classList.add('open'); });
+$('questionBtn').addEventListener('click', ()=>{ asWho='me'; qKind='choice'; qText=''; qOpts=['','']; qMulti=false; qLabel=appSet.qLabel||'abc'; renderQ(); $('questionOverlay').classList.add('open'); });
 $('closeQuestion').addEventListener('click', ()=>$('questionOverlay').classList.remove('open'));
 $('questionOverlay').addEventListener('click', e=>{ if(e.target===$('questionOverlay')) $('questionOverlay').classList.remove('open'); });
 $('doQuestionBtn').addEventListener('click', ()=>{
   const text=qText.trim(); if(!text){ toast('请输入问题'); return; }
   const q={kind:qKind,text};
-  if(qKind==='choice'){ const o=qOpts.map(v=>v.trim()).filter(Boolean); if(o.length<2){ toast('至少需要两个选项'); return; } q.options=o; }
+  if(qKind==='choice'){ const o=qOpts.map(v=>v.trim()).filter(Boolean); if(o.length<2){ toast('至少需要两个选项'); return; } q.options=o; q.multi=qMulti; q.label=qLabel; }
   addMsg({who:asWho,type:'question',text:'[提问] '+text,question:q,answer:null});
   $('questionOverlay').classList.remove('open'); if(asWho==='me') markPending(false);
 });
@@ -3451,7 +3500,7 @@ function detachReply(rid){
   const r=roles.find(x=>x.id===rid); if(!r||curRoleId!==rid) return;
   try{
     const items=curHistory.filter(m=>!m.recalled&&m.who==='me'&&((m.type==='question'&&!m.answer)||(m.type==='transfer'&&m.transfer&&m.transfer.status==='pending')));
-    items.forEach(m=>{ if(r.isGroup&&groupMembers(r).length) m.answerBy=randMember(r).id; if(m.type==='transfer') m.transfer.status=Math.random()<.8?'accepted':'returned'; else if(m.question.kind==='choice'){ const i=Math.floor(Math.random()*m.question.options.length); m.answer={idx:i,text:m.question.options[i]}; } else m.answer={text:pickCards(1)[0]||'嗯'}; });
+    items.forEach(m=>{ if(r.isGroup&&groupMembers(r).length) m.answerBy=randMember(r).id; if(m.type==='transfer') m.transfer.status=Math.random()<.8?'accepted':'returned'; else if(m.question.kind==='choice'){ m.answer=autoChoice(m.question); } else m.answer={text:pickCards(1)[0]||'嗯'}; });
     if(items.length) saveHistory();
     const msgs=[];
     if(fgNeed&&repCount()>0){
@@ -3464,7 +3513,8 @@ function detachReply(rid){
     let t=1500+Math.random()*2500; msgs.forEach(mo=>{ setTimeout(()=>bgDeliver(rid,mo),t); t+=700+Math.random()*700; });
   }catch(e){}
 }
-const _fgOpen=openChat; openChat=function(id){ if(curRoleId&&curRoleId!==id&&replying) detachReply(curRoleId); fgDismissKey('msg:'+id); return _fgOpen(id); };
+const _fgOpen=openChat; openChat=function(id){ if(curRoleId&&curRoleId!==id&&replying) detachReply(curRoleId); fgDismissKey('msg:'+id); chatLimit=60; return _fgOpen(id); };
+const _jt0=jumpTo; jumpTo=function(id){ if(id&&!$('chat').querySelector('.msg-group[data-id="'+id+'"]')){ const ix=curHistory.findIndex(m=>m.id===id); if(ix>=0){ chatLimit=curHistory.length-ix+20; renderChat(true); requestAnimationFrame(()=>_jt0(id)); return; } } _jt0(id); };
 /* 来信 */
 const fgLetSeen=new Set(); let fgLetInit=false;
 function fgLetterScan(){ const now=Date.now(); letters.forEach(l=>{ if(l.from!=='them'||l.read||l.arriveAt>now||fgLetSeen.has(l.id)) return; fgLetSeen.add(l.id); if(!fgLetInit) return; const r=roles.find(x=>x.id===l.roleId); if(!r) return;
@@ -3511,6 +3561,34 @@ document.querySelectorAll('#stickTabs button').forEach(b=>b.addEventListener('cl
 $('stickAddBtn').addEventListener('click',()=>pickImages(urls=>{ const mk=urls.map(url=>({id:uid(),src:url}));
   if(stickTab==='shared'){ dupToast(addUnique(sharedStickers,mk,c=>c.src)); saveSticks(); } else { const cg=curUG(); if(!cg) return; dupToast(addUnique(cg.items,mk,c=>c.src)); saveUG(); } renderStickPick(); }));
 $('stealToggle').addEventListener('change',e=>{ appSet.steal=!!e.target.checked; saveSet(); });
+
+/* ===== 唱片封面（每张唱片独立，点唱片更换）/ 每日一句点击编辑 ===== */
+syncVinyls=function(){ try{ homeLayout.forEach(it=>{ if(it.type!=='vinyl') return; const e=itemEl(it), l=e&&e.querySelector('.vinyl-label'); if(!l) return; const src=it.img||decor.vinylImage||''; l.innerHTML=src?'<img src="'+src.replace(/"/g,'&quot;')+'">':ICON.music; }); }catch(e){} };
+const _wtV=widgetTap;
+widgetTap=function(it){ if(editMode) return;
+  if(it.type==='vinyl'){ showChoiceSheet([{label:'更换封面',onClick:()=>pickImage(async u=>{ it.img=await compressImg(u,640,.85); saveHome(); renderHome(); })},{label:'恢复默认封面',onClick:()=>{ delete it.img; saveHome(); renderHome(); }}]); return; }
+  if(it.type==='quote'){ showChoiceSheet([{label:'编辑这句话',onClick:()=>dataModal('每日一句','',it.cur||'',false,[['保存','confirm',()=>{ it.cur=$('dataText').value.trim(); if(!it.cur) delete it.cur; saveHome(); closeData(); renderHome(); }],['取消','cancel',closeData]])},{label:'随机换一句',onClick:()=>_wtV(it)},{label:'恢复每日一句',onClick:()=>{ delete it.cur; saveHome(); renderHome(); }}]); return; }
+  _wtV(it); };
+(function(){ const t=[...document.querySelectorAll('#screen-decor .sec-title')].find(x=>x.textContent.trim()==='唱片封面'); if(t){ t.textContent='唱片颜色'; let n=t.nextElementSibling; while(n&&!n.classList.contains('sec-title')){ if(n.querySelector&&n.querySelector('#vinylBtn')) n.style.display='none'; n=n.nextElementSibling; } } })();
+try{ renderHome(); }catch(e){}
+
+/* ===== 发送键：状态切换不再“闪一帧”（回复中保持绿色淡出，不换图标不换底色） ===== */
+refreshSend=function(){
+  const has=$('msgInput').value.trim().length>0, go=!has&&canTrigger(), busy=!has&&!go&&replying, b=$('sendBtn');
+  b.classList.toggle('active',has||go||busy); b.classList.toggle('go',go||busy); b.classList.toggle('busy',busy);
+  const t=(go||busy)?'➤':'↑'; if(b.textContent!==t) b.textContent=t;
+  $('msgInput').placeholder=(go&&pending)?'继续输入，或再点一次发送让对方回复':'发消息…';
+};
+refreshSend();
+
+/* ===== 气泡尾巴：同一个人连发时，只有最后一条带尾巴 ===== */
+let tailRaf=0;
+function markTails(){ tailRaf=0; const c=$('chat'); if(!c) return; const kids=Array.from(c.children), col={};
+  const colorOf=(side,b)=>{ if(col[side]) return col[side]; const cs=getComputedStyle(b); let k=cs.backgroundColor; const bi=cs.backgroundImage; if(bi&&bi!=='none'){ const m=bi.match(/rgba?\([^)]+\)/g); if(m) k=m[m.length-1]; } return col[side]=k; };
+  kids.forEach((row,i)=>{ if(!row.classList||!row.classList.contains('msg-group')) return; const side=row.classList.contains('me')?'me':row.classList.contains('them')?'them':null; if(!side) return;
+    const b=row.querySelector('.bubble'); if(!b) return; const nx=kids[i+1], same=!!(nx&&nx.classList&&nx.classList.contains('msg-group')&&nx.classList.contains(side)&&nx.querySelector('.bubble'));
+    b.classList.toggle('tail',!same); if(!same) b.style.setProperty('--tail',colorOf(side,b)); }); }
+(function(){ const c=$('chat'); if(!c||!window.MutationObserver) return; new MutationObserver(()=>{ if(!tailRaf) tailRaf=requestAnimationFrame(()=>{ markTails(); c.querySelectorAll('img:not([decoding])').forEach(i=>{ i.decoding='async'; }); }); }).observe(c,{childList:true}); markTails(); })();
 
 /* ===== 压缩：上传自动压缩 + 一键压缩已有图片 + 占用统计 ===== */
 function CMP(){ return Object.assign({on:true,max:1280,q:80},appSet.cmp||{}); }
@@ -3563,7 +3641,7 @@ function cmpInit(){
   const o=CMP(); $('cmpOn').checked=o.on; $('cmpMax').value=String(o.max); $('cmpQ').value=o.q; $('cmpQv').textContent=o.q+'%';
   const save=()=>{ appSet.cmp={on:$('cmpOn').checked,max:Number($('cmpMax').value),q:Number($('cmpQ').value)}; $('cmpQv').textContent=appSet.cmp.q+'%'; saveSet(); };
   $('cmpOn').addEventListener('change',save); $('cmpMax').addEventListener('change',save); $('cmpQ').addEventListener('input',save);
-  $('stoBtn').addEventListener('click',()=>{ $('stoInfo').textContent=stoReport(); });
+  $('stoBtn').addEventListener('click',()=>{ $('stoInfo').textContent=stoReport(); try{ if(navigator.storage&&navigator.storage.estimate) navigator.storage.estimate().then(e=>{ if(e&&e.usage) $('stoInfo').textContent+='\n\n浏览器总占用约 '+stoFmt(e.usage)+'（含音频等文件）'; }); }catch(e){} });
   $('cmpRun').addEventListener('click',()=>showConfirm('把已保存的头像、壁纸、表情包、聊天和朋友圈里的大图，按当前“最大边长/画质”重新压缩？压缩后页面会刷新，无法还原（建议先备份）。',cmpExisting));
 }
 cmpInit();
